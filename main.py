@@ -22,7 +22,7 @@ async def home():
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Busca Clientes
+        # Clientes
         try:
             cursor.execute('SELECT * FROM "Clientes" LIMIT 30;')
             clientes = cursor.fetchall()
@@ -30,32 +30,15 @@ async def home():
             print(f"Erro Clientes: {e}")
             conn.rollback()
 
-        # Busca Processos unindo com Clientes e Ações
+        # Processos sem JOIN para evitar erros de relacionamento/tipagem
         try:
-            cursor.execute("""
-                SELECT 
-                    p.*,
-                    c."Nome" AS cliente_nome,
-                    a."Ação" AS acao_nome,
-                    a."Acao" AS acao_nome_alt
-                FROM "Processos" p
-                LEFT JOIN "Clientes" c ON p."CodCli" = c."CodCli"
-                LEFT JOIN "Ações" a ON p."Ação" = a."CodAção"
-                ORDER BY p."CodProcesso" DESC
-                LIMIT 30;
-            """)
+            cursor.execute('SELECT * FROM "Processos" LIMIT 30;')
             processos = cursor.fetchall()
         except Exception as e:
-            # Fallback caso os nomes exatos das chaves estrangeiras ou da tabela Ações variem
+            print(f"Erro Processos: {e}")
             conn.rollback()
-            try:
-                cursor.execute('SELECT * FROM "Processos" LIMIT 30;')
-                processos = cursor.fetchall()
-            except Exception as e2:
-                print(f"Erro Processos Fallback: {e2}")
-                conn.rollback()
 
-        # Busca Agenda
+        # Agenda
         try:
             cursor.execute('SELECT * FROM "Agenda" LIMIT 30;')
             agenda = cursor.fetchall()
@@ -68,18 +51,26 @@ async def home():
     except Exception as err:
         print(f"Erro Conexao: {err}")
 
+    # Auxiliar para tratar valores vazios/None/False
+    def get_val(item, keywords, default="N/A"):
+        for k, v in item.items():
+            if any(kw in k.lower() for kw in keywords):
+                if v not in [None, "", False]:
+                    return str(v)
+        return default
+
     # Renderiza Agenda
     agenda_html = ""
     for item in agenda:
-        tipo = next((v for k, v in item.items() if 'tipo' in k.lower() or 'evento' in k.lower()), 'Compromisso')
-        desc = next((v for k, v in item.items() if 'desc' in k.lower() or 'titulo' in k.lower() or 'assunto' in k.lower()), '')
-        data = next((v for k, v in item.items() if 'data' in k.lower()), '')
+        tipo = get_val(item, ['tipo', 'evento'], 'Compromisso')
+        desc = get_val(item, ['desc', 'titulo', 'assunto'], 'Sem descrição')
+        data = get_val(item, ['data'], 'N/A')
         
         agenda_html += f"""
         <div class="card">
-            <h3>⏳ {tipo or 'Compromisso'}</h3>
-            <p><strong>Data/Hora:</strong> {data or 'N/A'}</p>
-            <p><strong>Descrição:</strong> {desc or 'Sem descrição'}</p>
+            <h3>⏳ {tipo}</h3>
+            <p><strong>Data/Hora:</strong> {data}</p>
+            <p><strong>Descrição:</strong> {desc}</p>
         </div>
         """
     if not agenda:
@@ -88,26 +79,22 @@ async def home():
     # Renderiza Processos
     processos_html = ""
     for proc in processos:
-        # Pega processonovocod1
-        cod_novo = next((v for k, v in proc.items() if 'processonovocod1' in k.lower()), 'N/A')
+        # Busca o código do processo (processonovocod1)
+        cod_novo = get_val(proc, ['processonovocod1'], 'Sem Código')
         
-        # Pega número do processo / número original
-        num = next((v for k, v in proc.items() if k.lower() in ['numero', 'numeroprocesso', 'numprocesso', 'num']), '')
+        # Busca o número judicial/original
+        num_jud = get_val(proc, ['numeroprocesso', 'numprocesso', 'numero'], 'N/A')
         
-        # Cliente e Parte Contrária
-        cliente = proc.get('cliente_nome') or next((v for k, v in proc.items() if 'cliente' in k.lower() and k != 'cliente_nome'), 'N/A')
-        parte_contraria = next((v for k, v in proc.items() if 'contraria' in k.lower() or 'réu' in k.lower() or 'reu' in k.lower()), 'N/A')
-        
-        # Nome da Ação
-        acao = proc.get('acao_nome') or proc.get('acao_nome_alt') or next((v for k, v in proc.items() if 'acao' in k.lower() and k not in ['acao_nome', 'acao_nome_alt']), 'N/A')
-        
-        # Vara
-        vara = next((v for k, v in proc.items() if 'vara' in k.lower() or 'juizo' in k.lower()), 'N/A')
+        # Busca Cliente, Parte Contrária, Ação e Vara
+        cliente = get_val(proc, ['nomecliente', 'cliente', 'codcli'])
+        parte_contraria = get_val(proc, ['partecontraria', 'contraria', 'reu', 'réu'])
+        acao = get_val(proc, ['nomeacao', 'acao', 'ação'])
+        vara = get_val(proc, ['vara', 'juizo'])
         
         processos_html += f"""
         <div class="card">
             <h3>📁 Processo: {cod_novo}</h3>
-            {f'<p><strong>Nº Origem/Judicial:</strong> {num}</p>' if num else ''}
+            <p><strong>Nº Judicial:</strong> {num_jud}</p>
             <p><strong>Cliente:</strong> {cliente}</p>
             <p><strong>Parte Contrária:</strong> {parte_contraria}</p>
             <p><strong>Ação:</strong> {acao}</p>
@@ -120,15 +107,15 @@ async def home():
     # Renderiza Clientes
     clientes_html = ""
     for cli in clientes:
-        nome = next((v for k, v in cli.items() if 'nome' in k.lower() or 'cliente' in k.lower() or 'razao' in k.lower()), 'Sem Nome')
-        doc = next((v for k, v in cli.items() if 'cpf' in k.lower() or 'cnpj' in k.lower() or 'doc' in k.lower()), '')
-        tel = next((v for k, v in cli.items() if 'tel' in k.lower() or 'cel' in k.lower() or 'fone' in k.lower()), '')
+        nome = get_val(cli, ['nome', 'cliente', 'razao'], 'Sem Nome')
+        doc = get_val(cli, ['cpf', 'cnpj', 'doc'], 'N/A')
+        tel = get_val(cli, ['tel', 'cel', 'fone'], 'N/A')
         
         clientes_html += f"""
         <div class="card">
             <h3>👤 {nome}</h3>
-            <p><strong>Documento:</strong> {doc or 'N/A'}</p>
-            <p><strong>Telefone:</strong> {tel or 'N/A'}</p>
+            <p><strong>Documento:</strong> {doc}</p>
+            <p><strong>Telefone:</strong> {tel}</p>
         </div>
         """
     if not clientes:
