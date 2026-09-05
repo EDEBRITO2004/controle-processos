@@ -1,4 +1,5 @@
 import os
+from datetime import date
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 import psycopg2
@@ -28,12 +29,13 @@ def formatar_data(raw_data):
 @app.get("/", response_class=HTMLResponse)
 async def home():
     clientes, processos, agenda, prazos = [], [], [], []
+    hoje = date.today()
     
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # 1. Busca Clientes
+        # 1. Clientes
         try:
             cursor.execute('SELECT * FROM "Clientes" ORDER BY "Nomecli" ASC LIMIT 30;')
             clientes = cursor.fetchall()
@@ -41,7 +43,7 @@ async def home():
             print(f"Erro Clientes: {e}")
             conn.rollback()
 
-        # 2. Busca Processos
+        # 2. Processos
         try:
             cursor.execute("""
                 SELECT 
@@ -63,7 +65,7 @@ async def home():
             print(f"Erro Processos Join: {e}")
             conn.rollback()
 
-        # 3. Busca Agenda
+        # 3. Agenda
         try:
             cursor.execute("""
                 SELECT 
@@ -79,14 +81,14 @@ async def home():
                    OR a."Cumprido" = FALSE 
                    OR CAST(a."Cumprido" AS TEXT) IN ('0', 'false', 'FALSE', 'f', 'F', 'no', 'NO')
                 ORDER BY a."Data" ASC, a."Horário" ASC 
-                LIMIT 30;
+                LIMIT 50;
             """)
             agenda = cursor.fetchall()
         except Exception as e:
             print(f"Erro Agenda Join: {e}")
             conn.rollback()
 
-        # 4. Busca Publicações/Prazos (Apenas onde DataCumprimento NÃO é nula)
+        # 4. Publicações / Prazos
         try:
             cursor.execute("""
                 SELECT 
@@ -98,8 +100,8 @@ async def home():
                 LEFT JOIN "Processos" p ON pub."ProcessoNovoCod1" = p."ProcessoNovoCod1"
                 LEFT JOIN "Clientes" c ON p."CodCli" = c."CodCli"
                 WHERE pub."DataCumprimento" IS NOT NULL
-                ORDER BY pub."DataCumprimento" DESC
-                LIMIT 30;
+                ORDER BY pub."DataVencimento" ASC
+                LIMIT 100;
             """)
             prazos = cursor.fetchall()
         except Exception as e:
@@ -150,34 +152,55 @@ async def home():
     if not agenda:
         agenda_html = "<p style='padding:15px;'>Nenhum registro pendente na Agenda.</p>"
 
-    # Renderiza Prazos (Publicações)
+    # Renderiza Prazos com categorias (Vencidos, Vencendo, A Vencer)
     prazos_html = ""
     for prazo in prazos:
         cod_novo = prazo.get('ProcessoNovoCod1') or ''
         num_proc = prazo.get('numero_processo') or ''
         cliente = prazo.get('cliente_nome') or prazo.get('cliente_empresa') or 'Não informado'
         
-        data_venc = formatar_data(prazo.get('DataVencimento') or prazo.get('Data'))
+        dt_venc_raw = prazo.get('DataVencimento') or prazo.get('Data')
+        data_venc = formatar_data(dt_venc_raw)
         data_cump = formatar_data(prazo.get('DataCumprimento'))
         manifestacao = prazo.get('Manifestação') or prazo.get('Manifestacao') or 'Não informada'
         publicacao = prazo.get('Publicação') or prazo.get('Publicacao') or prazo.get('Texto') or 'Sem publicação'
+
+        # Lógica de Classificação de Prazo
+        categoria_prazo = "a_vencer"
+        if hasattr(dt_venc_raw, 'date'):
+            dt_venc_obj = dt_venc_raw.date()
+        elif isinstance(dt_venc_raw, date):
+            dt_venc_obj = dt_venc_raw
+        else:
+            dt_venc_obj = None
+
+        if dt_venc_obj:
+            if dt_venc_obj < hoje:
+                categoria_prazo = "vencidos"
+            elif dt_venc_obj == hoje:
+                categoria_prazo = "vencendo"
+            else:
+                categoria_prazo = "a_vencer"
 
         identificacao_proc = cod_novo
         if num_proc and num_proc != cod_novo:
             identificacao_proc += f" ({num_proc})" if cod_novo else num_proc
 
         prazos_html += f"""
-        <div class="card card-prazo">
+        <div class="card card-prazo item-prazo status-{categoria_prazo}">
             <h3>⏳ Vencimento: {data_venc}</h3>
             <p><strong>Data Cumprimento:</strong> {data_cump}</p>
             {f'<p><strong>Processo:</strong> {identificacao_proc}</p>' if identificacao_proc else ''}
             <p><strong>Cliente:</strong> {cliente}</p>
             <p><strong>Manifestação:</strong> {manifestacao}</p>
-            <p><strong>Publicação:</strong> {publicacao}</p>
+            <details class="pub-details">
+                <summary> Ver publicação</summary>
+                <div class="pub-content">{publicacao}</div>
+            </details>
         </div>
         """
     if not prazos:
-        prazos_html = "<p style='padding:15px;'>Nenhum prazo cumprido encontrado.</p>"
+        prazos_html = "<p style='padding:15px;'>Nenhum prazo encontrado.</p>"
 
     # Renderiza Processos
     processos_html = ""
@@ -254,6 +277,31 @@ async def home():
             }}
             .section {{ display: none; }}
             .section.active {{ display: block; }}
+            
+            /* Filtros por Botão na Aba Prazos */
+            .sub-filter-bar {{
+                display: flex;
+                gap: 8px;
+                margin-bottom: 12px;
+            }}
+            .btn-sub-filter {{
+                flex: 1;
+                padding: 8px 4px;
+                border: 1px solid #ced4da;
+                background-color: #ffffff;
+                color: #495057;
+                border-radius: 6px;
+                font-size: 0.82rem;
+                font-weight: 600;
+                cursor: pointer;
+                text-align: center;
+            }}
+            .btn-sub-filter.active {{
+                background-color: var(--blue-primary);
+                color: white;
+                border-color: var(--blue-primary);
+            }}
+
             .card {{
                 background: white;
                 border-radius: 10px;
@@ -268,6 +316,31 @@ async def home():
             .card h3 {{ margin: 0 0 6px 0; color: var(--blue-dark); font-size: 1rem; }}
             .card.card-prazo h3 {{ color: var(--red-deadline); }}
             .card p {{ margin: 3px 0; color: #495057; font-size: 0.9rem; }}
+
+            /* Estilo "Ver publicação" */
+            .pub-details {{
+                margin-top: 10px;
+                border-top: 1px solid #f0f0f0;
+                padding-top: 6px;
+            }}
+            .pub-details summary {{
+                color: var(--blue-primary);
+                font-weight: bold;
+                font-size: 0.88rem;
+                cursor: pointer;
+                outline: none;
+            }}
+            .pub-content {{
+                margin-top: 8px;
+                padding: 10px;
+                background-color: #f8f9fa;
+                border-radius: 6px;
+                font-size: 0.85rem;
+                color: #333;
+                white-space: pre-wrap;
+                line-height: 1.4;
+            }}
+
             .bottom-nav {{
                 position: fixed;
                 bottom: 0; left: 0; right: 0;
@@ -291,7 +364,16 @@ async def home():
     <body>
         <header>Controle de Processos</header>
         <div class="container">
-            <div id="prazos" class="section active">{prazos_html}</div>
+            <div id="prazos" class="section active">
+                <div class="sub-filter-bar">
+                    <button class="btn-sub-filter" onclick="filtrarPrazos('vencidos', this)">Vencidos</button>
+                    <button class="btn-sub-filter active" onclick="filtrarPrazos('vencendo', this)">Vencendo</button>
+                    <button class="btn-sub-filter" onclick="filtrarPrazos('a_vencer', this)">A vencer</button>
+                </div>
+                <div id="prazos-list">
+                    {prazos_html}
+                </div>
+            </div>
             <div id="agenda" class="section">{agenda_html}</div>
             <div id="processos" class="section">{processos_html}</div>
             <div id="clientes" class="section">{clientes_html}</div>
@@ -309,6 +391,27 @@ async def home():
                 document.getElementById(tabId).classList.add('active');
                 element.classList.add('active');
             }}
+
+            function filtrarPrazos(status, btnElement) {{
+                document.querySelectorAll('.btn-sub-filter').forEach(b => b.classList.remove('active'));
+                btnElement.classList.add('active');
+
+                document.querySelectorAll('.item-prazo').forEach(item => {{
+                    if (item.classList.contains('status-' + status)) {{
+                        item.style.display = 'block';
+                    }} else {{
+                        item.style.display = 'none';
+                    }}
+                }});
+            }}
+
+            // Aplica o filtro inicial ao carregar
+            document.addEventListener("DOMContentLoaded", function() {{
+                const btnVencendo = document.querySelector('.btn-sub-filter.active');
+                if (btnVencendo) {{
+                    filtrarPrazos('vencendo', btnVencendo);
+                }}
+            }});
         </script>
     </body>
     </html>
