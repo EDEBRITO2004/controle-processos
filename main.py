@@ -22,25 +22,42 @@ async def home():
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Busca Clientes na tabela "Clientes"
+        # Busca Clientes
         try:
-            cursor.execute('SELECT * FROM "Clientes" LIMIT 20;')
+            cursor.execute('SELECT * FROM "Clientes" LIMIT 30;')
             clientes = cursor.fetchall()
         except Exception as e:
             print(f"Erro Clientes: {e}")
             conn.rollback()
 
-        # Busca Processos na tabela "Processos"
+        # Busca Processos unindo com Clientes e Ações
         try:
-            cursor.execute('SELECT * FROM "Processos" LIMIT 20;')
+            cursor.execute("""
+                SELECT 
+                    p.*,
+                    c."Nome" AS cliente_nome,
+                    a."Ação" AS acao_nome,
+                    a."Acao" AS acao_nome_alt
+                FROM "Processos" p
+                LEFT JOIN "Clientes" c ON p."CodCli" = c."CodCli"
+                LEFT JOIN "Ações" a ON p."Ação" = a."CodAção"
+                ORDER BY p."CodProcesso" DESC
+                LIMIT 30;
+            """)
             processos = cursor.fetchall()
         except Exception as e:
-            print(f"Erro Processos: {e}")
+            # Fallback caso os nomes exatos das chaves estrangeiras ou da tabela Ações variem
             conn.rollback()
+            try:
+                cursor.execute('SELECT * FROM "Processos" LIMIT 30;')
+                processos = cursor.fetchall()
+            except Exception as e2:
+                print(f"Erro Processos Fallback: {e2}")
+                conn.rollback()
 
-        # Busca Agenda na tabela "Agenda"
+        # Busca Agenda
         try:
-            cursor.execute('SELECT * FROM "Agenda" LIMIT 20;')
+            cursor.execute('SELECT * FROM "Agenda" LIMIT 30;')
             agenda = cursor.fetchall()
         except Exception as e:
             print(f"Erro Agenda: {e}")
@@ -54,16 +71,15 @@ async def home():
     # Renderiza Agenda
     agenda_html = ""
     for item in agenda:
-        # Busca a primeira chave que contiver o nome esperado
         tipo = next((v for k, v in item.items() if 'tipo' in k.lower() or 'evento' in k.lower()), 'Compromisso')
         desc = next((v for k, v in item.items() if 'desc' in k.lower() or 'titulo' in k.lower() or 'assunto' in k.lower()), '')
         data = next((v for k, v in item.items() if 'data' in k.lower()), '')
         
         agenda_html += f"""
         <div class="card">
-            <h3>⏳ {tipo}</h3>
-            <p><strong>Data/Hora:</strong> {data}</p>
-            <p><strong>Descrição:</strong> {desc}</p>
+            <h3>⏳ {tipo or 'Compromisso'}</h3>
+            <p><strong>Data/Hora:</strong> {data or 'N/A'}</p>
+            <p><strong>Descrição:</strong> {desc or 'Sem descrição'}</p>
         </div>
         """
     if not agenda:
@@ -72,13 +88,28 @@ async def home():
     # Renderiza Processos
     processos_html = ""
     for proc in processos:
-        num = next((v for k, v in proc.items() if 'num' in k.lower() or 'processo' in k.lower()), 'Sem Número')
-        acao = next((v for k, v in proc.items() if 'acao' in k.lower() or 'natureza' in k.lower()), '')
-        vara = next((v for k, v in proc.items() if 'vara' in k.lower() or 'juizo' in k.lower()), '')
+        # Pega processonovocod1
+        cod_novo = next((v for k, v in proc.items() if 'processonovocod1' in k.lower()), 'N/A')
+        
+        # Pega número do processo / número original
+        num = next((v for k, v in proc.items() if k.lower() in ['numero', 'numeroprocesso', 'numprocesso', 'num']), '')
+        
+        # Cliente e Parte Contrária
+        cliente = proc.get('cliente_nome') or next((v for k, v in proc.items() if 'cliente' in k.lower() and k != 'cliente_nome'), 'N/A')
+        parte_contraria = next((v for k, v in proc.items() if 'contraria' in k.lower() or 'réu' in k.lower() or 'reu' in k.lower()), 'N/A')
+        
+        # Nome da Ação
+        acao = proc.get('acao_nome') or proc.get('acao_nome_alt') or next((v for k, v in proc.items() if 'acao' in k.lower() and k not in ['acao_nome', 'acao_nome_alt']), 'N/A')
+        
+        # Vara
+        vara = next((v for k, v in proc.items() if 'vara' in k.lower() or 'juizo' in k.lower()), 'N/A')
         
         processos_html += f"""
         <div class="card">
-            <h3>📁 Processo: {num}</h3>
+            <h3>📁 Processo: {cod_novo}</h3>
+            {f'<p><strong>Nº Origem/Judicial:</strong> {num}</p>' if num else ''}
+            <p><strong>Cliente:</strong> {cliente}</p>
+            <p><strong>Parte Contrária:</strong> {parte_contraria}</p>
             <p><strong>Ação:</strong> {acao}</p>
             <p><strong>Vara/Juízo:</strong> {vara}</p>
         </div>
@@ -96,8 +127,8 @@ async def home():
         clientes_html += f"""
         <div class="card">
             <h3>👤 {nome}</h3>
-            <p><strong>Documento:</strong> {doc}</p>
-            <p><strong>Telefone:</strong> {tel}</p>
+            <p><strong>Documento:</strong> {doc or 'N/A'}</p>
+            <p><strong>Telefone:</strong> {tel or 'N/A'}</p>
         </div>
         """
     if not clientes:
