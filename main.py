@@ -100,7 +100,7 @@ async def home():
                 WHERE pub."Cumprido" IS NULL 
                    OR pub."Cumprido" = FALSE 
                    OR CAST(pub."Cumprido" AS TEXT) IN ('0', 'false', 'FALSE', 'f', 'F', 'no', 'NO')
-                ORDER BY pub."DataVencimento" ASC
+                ORDER BY pub."DataCumprimento" ASC
                 LIMIT 30;
             """)
             prazos = cursor.fetchall()
