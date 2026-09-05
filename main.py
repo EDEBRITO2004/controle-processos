@@ -54,12 +54,16 @@ async def home():
 
         # Busca Agenda
         try:
-            cursor.execute('SELECT * FROM "Agenda" WHERE "cumprido" = false LIMIT 30;')
+            cursor.execute("""
+                SELECT * FROM "Agenda" 
+                WHERE "Cumprido" = FALSE OR "Cumprido" IS NULL 
+                ORDER BY "Data" ASC 
+                LIMIT 30;
+            """)
             agenda = cursor.fetchall()
         except Exception as e:
             print(f"Erro Agenda: {e}")
             conn.rollback()
-
         cursor.close()
         conn.close()
     except Exception as err:
