@@ -88,7 +88,7 @@ async def home():
             print(f"Erro Agenda Join: {e}")
             conn.rollback()
 
-        # 4. Publicações / Prazos
+        # 4. Publicações / Prazos (Traz todos com DataCumprimento IS NOT NULL)
         try:
             cursor.execute("""
                 SELECT 
@@ -152,8 +152,10 @@ async def home():
     if not agenda:
         agenda_html = "<p style='padding:15px;'>Nenhum registro pendente na Agenda.</p>"
 
-    # Renderiza Prazos com categorias (Vencidos, Vencendo, A Vencer)
+    # Renderiza Prazos com categorias
     prazos_html = ""
+    counts = {"vencidos": 0, "vencendo": 0, "a_vencer": 0}
+
     for prazo in prazos:
         cod_novo = prazo.get('ProcessoNovoCod1') or ''
         num_proc = prazo.get('numero_processo') or ''
@@ -182,6 +184,8 @@ async def home():
             else:
                 categoria_prazo = "a_vencer"
 
+        counts[categoria_prazo] += 1
+
         identificacao_proc = cod_novo
         if num_proc and num_proc != cod_novo:
             identificacao_proc += f" ({num_proc})" if cod_novo else num_proc
@@ -194,13 +198,18 @@ async def home():
             <p><strong>Cliente:</strong> {cliente}</p>
             <p><strong>Manifestação:</strong> {manifestacao}</p>
             <details class="pub-details">
-                <summary> Ver publicação</summary>
+                <summary>▶ Ver publicação</summary>
                 <div class="pub-content">{publicacao}</div>
             </details>
         </div>
         """
-    if not prazos:
-        prazos_html = "<p style='padding:15px;'>Nenhum prazo encontrado.</p>"
+
+    # Mensagens de lista vazia para cada categoria
+    prazos_html += f"""
+    <div class="empty-msg msg-vencidos" style="display:none; padding:15px; color:#6c757d;">Nenhum prazo vencido encontrado.</div>
+    <div class="empty-msg msg-vencendo" style="display:none; padding:15px; color:#6c757d;">Nenhum prazo vencendo hoje encontrado.</div>
+    <div class="empty-msg msg-a_vencer" style="display:none; padding:15px; color:#6c757d;">Nenhum prazo a vencer encontrado.</div>
+    """
 
     # Renderiza Processos
     processos_html = ""
@@ -278,7 +287,6 @@ async def home():
             .section {{ display: none; }}
             .section.active {{ display: block; }}
             
-            /* Filtros por Botão na Aba Prazos */
             .sub-filter-bar {{
                 display: flex;
                 gap: 8px;
@@ -317,7 +325,6 @@ async def home():
             .card.card-prazo h3 {{ color: var(--red-deadline); }}
             .card p {{ margin: 3px 0; color: #495057; font-size: 0.9rem; }}
 
-            /* Estilo "Ver publicação" */
             .pub-details {{
                 margin-top: 10px;
                 border-top: 1px solid #f0f0f0;
@@ -366,9 +373,9 @@ async def home():
         <div class="container">
             <div id="prazos" class="section active">
                 <div class="sub-filter-bar">
-                    <button class="btn-sub-filter" onclick="filtrarPrazos('vencidos', this)">Vencidos</button>
-                    <button class="btn-sub-filter active" onclick="filtrarPrazos('vencendo', this)">Vencendo</button>
-                    <button class="btn-sub-filter" onclick="filtrarPrazos('a_vencer', this)">A vencer</button>
+                    <button class="btn-sub-filter" onclick="filtrarPrazos('vencidos', this)">Vencidos ({counts['vencidos']})</button>
+                    <button class="btn-sub-filter" onclick="filtrarPrazos('vencendo', this)">Vencendo ({counts['vencendo']})</button>
+                    <button class="btn-sub-filter active" onclick="filtrarPrazos('a_vencer', this)">A vencer ({counts['a_vencer']})</button>
                 </div>
                 <div id="prazos-list">
                     {prazos_html}
@@ -394,22 +401,29 @@ async def home():
 
             function filtrarPrazos(status, btnElement) {{
                 document.querySelectorAll('.btn-sub-filter').forEach(b => b.classList.remove('active'));
-                btnElement.classList.add('active');
+                if(btnElement) btnElement.classList.add('active');
 
+                let totalVisivel = 0;
                 document.querySelectorAll('.item-prazo').forEach(item => {{
                     if (item.classList.contains('status-' + status)) {{
                         item.style.display = 'block';
+                        totalVisivel++;
                     }} else {{
                         item.style.display = 'none';
                     }}
                 }});
+
+                document.querySelectorAll('.empty-msg').forEach(msg => msg.style.display = 'none');
+                if (totalVisivel === 0) {{
+                    const msgEl = document.querySelector('.msg-' + status);
+                    if (msgEl) msgEl.style.display = 'block';
+                }}
             }}
 
-            // Aplica o filtro inicial ao carregar
             document.addEventListener("DOMContentLoaded", function() {{
-                const btnVencendo = document.querySelector('.btn-sub-filter.active');
-                if (btnVencendo) {{
-                    filtrarPrazos('vencendo', btnVencendo);
+                const btnAtivo = document.querySelector('.btn-sub-filter.active');
+                if (btnAtivo) {{
+                    filtrarPrazos('a_vencer', btnAtivo);
                 }}
             }});
         </script>
