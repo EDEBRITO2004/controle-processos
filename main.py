@@ -51,12 +51,12 @@ async def home():
         except Exception as e:
             print(f"Erro Processos Join: {e}")
             conn.rollback()
-
-        # 3. Busca Agenda (Apenas pendentes, com JOIN em Processos e Clientes)
+        # Busca Agenda com Horário
         try:
             cursor.execute("""
                 SELECT 
                     a.*,
+                    a."Horário" AS horario_compromisso,
                     p."Processo" AS numero_processo,
                     c."Nomecli" AS cliente_nome,
                     c."Empresa" AS cliente_empresa
@@ -64,13 +64,15 @@ async def home():
                 LEFT JOIN "Processos" p ON a."ProcessoNovoCod1" = p."ProcessoNovoCod1"
                 LEFT JOIN "Clientes" c ON p."CodCli" = c."CodCli"
                 WHERE a."Cumprido" = FALSE OR a."Cumprido" IS NULL 
-                ORDER BY a."Data" ASC 
+                ORDER BY a."Data" ASC, a."Horário" ASC 
                 LIMIT 30;
             """)
             agenda = cursor.fetchall()
         except Exception as e:
             print(f"Erro Agenda Join: {e}")
             conn.rollback()
+
+
 
         cursor.close()
         conn.close()
