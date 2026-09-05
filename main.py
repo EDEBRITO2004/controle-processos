@@ -22,7 +22,7 @@ async def home():
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Busca Clientes
+        # 1. Busca Clientes
         try:
             cursor.execute('SELECT * FROM "Clientes" ORDER BY "Nomecli" ASC LIMIT 30;')
             clientes = cursor.fetchall()
@@ -30,7 +30,7 @@ async def home():
             print(f"Erro Clientes: {e}")
             conn.rollback()
 
-        # Consulta unindo Processos com Clientes e Ações usando os nomes exatos do models.py
+        # 2. Busca Processos
         try:
             cursor.execute("""
                 SELECT 
@@ -52,18 +52,26 @@ async def home():
             print(f"Erro Processos Join: {e}")
             conn.rollback()
 
-        # Busca Agenda
+        # 3. Busca Agenda (Apenas pendentes, com JOIN em Processos e Clientes)
         try:
             cursor.execute("""
-                SELECT * FROM "Agenda" 
-                WHERE "Cumprido" = FALSE OR "Cumprido" IS NULL 
-                ORDER BY "Data" ASC 
+                SELECT 
+                    a.*,
+                    p."Processo" AS numero_processo,
+                    c."Nomecli" AS cliente_nome,
+                    c."Empresa" AS cliente_empresa
+                FROM "Agenda" a
+                LEFT JOIN "Processos" p ON a."ProcessoNovoCod1" = p."ProcessoNovoCod1"
+                LEFT JOIN "Clientes" c ON p."CodCli" = c."CodCli"
+                WHERE a."Cumprido" = FALSE OR a."Cumprido" IS NULL 
+                ORDER BY a."Data" ASC 
                 LIMIT 30;
             """)
             agenda = cursor.fetchall()
         except Exception as e:
-            print(f"Erro Agenda: {e}")
+            print(f"Erro Agenda Join: {e}")
             conn.rollback()
+
         cursor.close()
         conn.close()
     except Exception as err:
@@ -74,27 +82,48 @@ async def home():
     for item in agenda:
         tipo = item.get('Tipo') or 'Compromisso'
         desc = item.get('Tarefa') or item.get('Observações') or 'Sem descrição'
-        data = item.get('Data') or 'N/A'
+        cod_novo = item.get('ProcessoNovoCod1') or ''
+        num_proc = item.get('numero_processo') or ''
         
+        # Cliente vindo do JOIN ou da própria tabela Agenda
+        cliente = item.get('cliente_nome') or item.get('cliente_empresa') or item.get('NomeCli') or 'Não informado'
+        
+        # Formatação de Data (DD/MM/AAAA)
+        raw_data = item.get('Data')
+        data_fmt = 'N/A'
+        if raw_data:
+            if hasattr(raw_data, 'strftime'):
+                data_fmt = raw_data.strftime('%d/%m/%Y')
+            else:
+                try:
+                    parts = str(raw_data).split()[0].split('-')
+                    data_fmt = f"{parts[2]}/{parts[1]}/{parts[0]}"
+                except Exception:
+                    data_fmt = str(raw_data)
+
+        # Monta a identificação do processo
+        identificacao_proc = cod_novo
+        if num_proc and num_proc != cod_novo:
+            identificacao_proc += f" ({num_proc})" if cod_novo else num_proc
+
         agenda_html += f"""
         <div class="card">
             <h3>⏳ {tipo}</h3>
-            <p><strong>Data:</strong> {data}</p>
+            <p><strong>Data:</strong> {data_fmt}</p>
+            {f'<p><strong>Processo:</strong> {identificacao_proc}</p>' if identificacao_proc else ''}
+            <p><strong>Cliente:</strong> {cliente}</p>
             <p><strong>Descrição:</strong> {desc}</p>
         </div>
         """
     if not agenda:
-        agenda_html = "<p style='padding:15px;'>Nenhum registro na Agenda.</p>"
+        agenda_html = "<p style='padding:15px;'>Nenhum registro pendente na Agenda.</p>"
 
     # Renderiza Processos
     processos_html = ""
     for proc in processos:
         cod_novo = proc.get('ProcessoNovoCod1') or 'Sem Cód. Novo'
         num_proc = proc.get('Processo') or ''
-        
-        # Nome do Cliente (Nomecli ou Empresa)
         cliente = proc.get('cliente_nome') or proc.get('cliente_empresa') or 'Não informado'
-        
         parte_contraria = proc.get('parte_contraria') or 'Não informada'
         acao = proc.get('acao_nome') or 'Não informada'
         vara = proc.get('Vara') or 'Não informada'
