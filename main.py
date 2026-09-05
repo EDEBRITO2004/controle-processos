@@ -115,7 +115,7 @@ async def home():
                     data_fmt = str(raw_data)
 
         # Exibe "HH:MM - DD/MM/AAAA" ou apenas "DD/MM/AAAA"
-        data_hora_exibicao = f"{hora_fmt} - {data_fmt}" if hora_fmt else data_fmt
+        data_hora_exibicao = f"{data_fmt} - {hora_fmt}" if hora_fmt else data_fmt
 
         # Monta a identificação do processo
         identificacao_proc = cod_novo
