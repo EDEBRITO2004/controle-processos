@@ -54,7 +54,7 @@ async def home():
 
         # Busca Agenda
         try:
-            cursor.execute('SELECT * FROM "Agenda" LIMIT 30;')
+            cursor.execute('SELECT * FROM "Agenda" WHERE "cumprido" = false LIMIT 30;')
             agenda = cursor.fetchall()
         except Exception as e:
             print(f"Erro Agenda: {e}")
