@@ -14,9 +14,20 @@ DATABASE_URL = os.getenv(
 def get_db_connection():
     return psycopg2.connect(DATABASE_URL, sslmode='require', cursor_factory=RealDictCursor)
 
+def formatar_data(raw_data):
+    if not raw_data:
+        return 'N/A'
+    if hasattr(raw_data, 'strftime'):
+        return raw_data.strftime('%d/%m/%Y')
+    try:
+        parts = str(raw_data).split()[0].split('-')
+        return f"{parts[2]}/{parts[1]}/{parts[0]}"
+    except Exception:
+        return str(raw_data)
+
 @app.get("/", response_class=HTMLResponse)
 async def home():
-    clientes, processos, agenda = [], [], []
+    clientes, processos, agenda, prazos = [], [], [], []
     
     try:
         conn = get_db_connection()
@@ -52,7 +63,7 @@ async def home():
             print(f"Erro Processos Join: {e}")
             conn.rollback()
 
-        # 3. Busca Agenda com Horário (Apenas pendentes, ordenado por data e hora)
+        # 3. Busca Agenda (Filtro por Cumprido = FALSE)
         try:
             cursor.execute("""
                 SELECT 
@@ -73,6 +84,26 @@ async def home():
             print(f"Erro Agenda Join: {e}")
             conn.rollback()
 
+        # 4. Busca Publicações/Prazos (Filtro por Cumprido = FALSE)
+        try:
+            cursor.execute("""
+                SELECT 
+                    pub.*,
+                    p."Processo" AS numero_processo,
+                    c."Nomecli" AS cliente_nome,
+                    c."Empresa" AS cliente_empresa
+                FROM "Publicações" pub
+                LEFT JOIN "Processos" p ON pub."ProcessoNovoCod1" = p."ProcessoNovoCod1"
+                LEFT JOIN "Clientes" c ON p."CodCli" = c."CodCli"
+                WHERE pub."Cumprido" = FALSE OR pub."Cumprido" IS NULL
+                ORDER BY pub."DataVencimento" ASC
+                LIMIT 30;
+            """)
+            prazos = cursor.fetchall()
+        except Exception as e:
+            print(f"Erro Publicações Join: {e}")
+            conn.rollback()
+
         cursor.close()
         conn.close()
     except Exception as err:
@@ -85,11 +116,8 @@ async def home():
         desc = item.get('Tarefa') or item.get('Observações') or 'Sem descrição'
         cod_novo = item.get('ProcessoNovoCod1') or ''
         num_proc = item.get('numero_processo') or ''
-        
-        # Cliente vindo do JOIN ou da própria tabela Agenda
         cliente = item.get('cliente_nome') or item.get('cliente_empresa') or item.get('NomeCli') or 'Não informado'
         
-        # Formatação do Horário (HH:MM)
         raw_hora = item.get('horario_compromisso') or item.get('Horário')
         hora_fmt = ""
         if raw_hora:
@@ -101,30 +129,16 @@ async def home():
                 except Exception:
                     hora_fmt = str(raw_hora)
 
-        # Formatação de Data (DD/MM/AAAA)
-        raw_data = item.get('Data')
-        data_fmt = 'N/A'
-        if raw_data:
-            if hasattr(raw_data, 'strftime'):
-                data_fmt = raw_data.strftime('%d/%m/%Y')
-            else:
-                try:
-                    parts = str(raw_data).split()[0].split('-')
-                    data_fmt = f"{parts[2]}/{parts[1]}/{parts[0]}"
-                except Exception:
-                    data_fmt = str(raw_data)
+        data_fmt = formatar_data(item.get('Data'))
+        data_hora_exibicao = f"{hora_fmt} - {data_fmt}" if hora_fmt else data_fmt
 
-        # Exibe "HH:MM - DD/MM/AAAA" ou apenas "DD/MM/AAAA"
-        data_hora_exibicao = f"{data_fmt} - {hora_fmt}" if hora_fmt else data_fmt
-
-        # Monta a identificação do processo
         identificacao_proc = cod_novo
         if num_proc and num_proc != cod_novo:
             identificacao_proc += f" ({num_proc})" if cod_novo else num_proc
 
         agenda_html += f"""
         <div class="card">
-            <h3>⏳ {tipo}</h3>
+            <h3>📆 {tipo}</h3>
             <p><strong>Data/Hora:</strong> {data_hora_exibicao}</p>
             {f'<p><strong>Processo:</strong> {identificacao_proc}</p>' if identificacao_proc else ''}
             <p><strong>Cliente:</strong> {cliente}</p>
@@ -133,6 +147,35 @@ async def home():
         """
     if not agenda:
         agenda_html = "<p style='padding:15px;'>Nenhum registro pendente na Agenda.</p>"
+
+    # Renderiza Prazos (Publicações)
+    prazos_html = ""
+    for prazo in prazos:
+        cod_novo = prazo.get('ProcessoNovoCod1') or ''
+        num_proc = prazo.get('numero_processo') or ''
+        cliente = prazo.get('cliente_nome') or prazo.get('cliente_empresa') or 'Não informado'
+        
+        data_venc = formatar_data(prazo.get('DataVencimento') or prazo.get('Data'))
+        data_cump = formatar_data(prazo.get('DataCumprimento'))
+        manifestacao = prazo.get('Manifestação') or prazo.get('Manifestacao') or 'Não informada'
+        publicacao = prazo.get('Publicação') or prazo.get('Publicacao') or prazo.get('Texto') or 'Sem publicação'
+
+        identificacao_proc = cod_novo
+        if num_proc and num_proc != cod_novo:
+            identificacao_proc += f" ({num_proc})" if cod_novo else num_proc
+
+        prazos_html += f"""
+        <div class="card card-prazo">
+            <h3>⏳ Vencimento: {data_venc}</h3>
+            <p><strong>Data Cumprimento:</strong> {data_cump}</p>
+            {f'<p><strong>Processo:</strong> {identificacao_proc}</p>' if identificacao_proc else ''}
+            <p><strong>Cliente:</strong> {cliente}</p>
+            <p><strong>Manifestação:</strong> {manifestacao}</p>
+            <p><strong>Publicação:</strong> {publicacao}</p>
+        </div>
+        """
+    if not prazos:
+        prazos_html = "<p style='padding:15px;'>Nenhum prazo pendente encontrado.</p>"
 
     # Renderiza Processos
     processos_html = ""
@@ -185,6 +228,7 @@ async def home():
             :root {{
                 --blue-primary: #0d6efd;
                 --blue-dark: #0a58ca;
+                --red-deadline: #dc3545;
                 --bg-body: #f8f9fa;
             }}
             body {{
@@ -216,7 +260,11 @@ async def home():
                 box-shadow: 0 1px 3px rgba(0,0,0,0.08);
                 border-left: 4px solid var(--blue-primary);
             }}
+            .card.card-prazo {{
+                border-left-color: var(--red-deadline);
+            }}
             .card h3 {{ margin: 0 0 6px 0; color: var(--blue-dark); font-size: 1rem; }}
+            .card.card-prazo h3 {{ color: var(--red-deadline); }}
             .card p {{ margin: 3px 0; color: #495057; font-size: 0.9rem; }}
             .bottom-nav {{
                 position: fixed;
@@ -229,7 +277,7 @@ async def home():
             }}
             .nav-item {{
                 border: none; background: none;
-                color: #6c757d; font-size: 0.9rem;
+                color: #6c757d; font-size: 0.85rem;
                 cursor: pointer;
             }}
             .nav-item.active {{
@@ -241,12 +289,14 @@ async def home():
     <body>
         <header>Controle de Processos</header>
         <div class="container">
-            <div id="agenda" class="section active">{agenda_html}</div>
+            <div id="prazos" class="section active">{prazos_html}</div>
+            <div id="agenda" class="section">{agenda_html}</div>
             <div id="processos" class="section">{processos_html}</div>
             <div id="clientes" class="section">{clientes_html}</div>
         </div>
         <nav class="bottom-nav">
-            <button class="nav-item active" onclick="showTab('agenda', this)">⏳ Agenda</button>
+            <button class="nav-item active" onclick="showTab('prazos', this)">⏳ Prazos</button>
+            <button class="nav-item" onclick="showTab('agenda', this)">📆 Agenda</button>
             <button class="nav-item" onclick="showTab('processos', this)">📁 Processos</button>
             <button class="nav-item" onclick="showTab('clientes', this)">👤 Clientes</button>
         </nav>
