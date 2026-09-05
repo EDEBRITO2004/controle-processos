@@ -19,10 +19,20 @@ def formatar_data(raw_data):
     if not raw_data:
         return 'N/A'
     if hasattr(raw_data, 'strftime'):
-        return raw_data.strftime('%d/%m/%Y')
+        dt_obj = raw_data
+        if dt_obj.year < 2000:
+            try:
+                ano_corrigido = int(str(dt_obj.year).zfill(4)[-2:]) + 2000
+                dt_obj = dt_obj.replace(year=ano_corrigido)
+            except Exception:
+                pass
+        return dt_obj.strftime('%d/%m/%Y')
     try:
         parts = str(raw_data).split()[0].split('-')
-        return f"{parts[2]}/{parts[1]}/{parts[0]}"
+        ano = int(parts[0])
+        if ano < 2000:
+            ano = int(str(ano).zfill(4)[-2:]) + 2000
+        return f"{parts[2]}/{parts[1]}/{ano}"
     except Exception:
         return str(raw_data)
 
@@ -88,7 +98,7 @@ async def home():
             print(f"Erro Agenda Join: {e}")
             conn.rollback()
 
-        # 4. Publicações / Prazos (Apenas com DataCumprimento preenchida)
+        # 4. Publicações / Prazos (Traz registros com DataCumprimento)
         try:
             cursor.execute("""
                 SELECT 
@@ -100,8 +110,7 @@ async def home():
                 LEFT JOIN "Processos" p ON pub."ProcessoNovoCod1" = p."ProcessoNovoCod1"
                 LEFT JOIN "Clientes" c ON p."CodCli" = c."CodCli"
                 WHERE pub."DataCumprimento" IS NOT NULL
-                ORDER BY pub."DataCumprimento" ASC
-                LIMIT 100;
+                ORDER BY pub."DataCumprimento" DESC;
             """)
             prazos = cursor.fetchall()
         except Exception as e:
@@ -167,15 +176,23 @@ async def home():
         manifestacao = prazo.get('Manifestação') or prazo.get('Manifestacao') or 'Não informada'
         publicacao = prazo.get('Publicação') or prazo.get('Publicacao') or prazo.get('Texto') or 'Sem publicação'
 
-        # Classificação do Prazo baseada estritamente na DataCumprimento vs Hoje
-        categoria_prazo = "a_vencer"
-        if hasattr(dt_cump_raw, 'date'):
-            dt_cump_obj = dt_cump_raw.date()
-        elif isinstance(dt_cump_raw, date):
-            dt_cump_obj = dt_cump_raw
-        else:
-            dt_cump_obj = None
+        # Trata e corrige o ano de dt_cump_raw
+        dt_cump_obj = None
+        if dt_cump_raw:
+            if hasattr(dt_cump_raw, 'date'):
+                dt_cump_obj = dt_cump_raw.date()
+            elif isinstance(dt_cump_raw, date):
+                dt_cump_obj = dt_cump_raw
+            
+            if dt_cump_obj and dt_cump_obj.year < 2000:
+                try:
+                    ano_corrigido = int(str(dt_cump_obj.year).zfill(4)[-2:]) + 2000
+                    dt_cump_obj = dt_cump_obj.replace(year=ano_corrigido)
+                except Exception:
+                    pass
 
+        # Classificação baseada em DataCumprimento vs Hoje
+        categoria_prazo = "a_vencer"
         if dt_cump_obj:
             if dt_cump_obj < hoje:
                 categoria_prazo = "vencidos"
@@ -204,7 +221,6 @@ async def home():
         </div>
         """
 
-    # Mensagens de lista vazia para cada filtro
     prazos_html += f"""
     <div class="empty-msg msg-vencidos" style="display:none; padding:15px; color:#6c757d;">Nenhum prazo com Data Cumprimento anterior a hoje.</div>
     <div class="empty-msg msg-vencendo" style="display:none; padding:15px; color:#6c757d;">Nenhum prazo com Data Cumprimento para hoje.</div>
