@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Processos</title>
+    <style>
+        :root {
+            --blue-primary: #0d6efd;
+            --blue-dark: #0a58ca;
+            --blue-light: #e7f1ff;
+            --bg-body: #f8f9fa;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-body);
+            margin: 0;
+            padding-bottom: 70px;
+        }
+
+        header {
+            background-color: var(--blue-dark);
+            color: white;
+            padding: 16px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .container {
+            padding: 12px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 14px;
+            margin-bottom: 10px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            border-left: 4px solid var(--blue-primary);
+        }
+
+        .card h3 {
+            margin: 0 0 6px 0;
+            color: var(--blue-dark);
+            font-size: 1rem;
+        }
+
+        .card p {
+            margin: 3px 0;
+            color: #495057;
+            font-size: 0.9rem;
+        }
+
+        /* Barra de Navegação Inferior (Estilo App Mobile) */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            border-top: 1px solid #dee2e6;
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.05);
+        }
+
+        .nav-item {
+            border: none;
+            background: none;
+            color: #6c757d;
+            font-size: 0.85rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .nav-item.active {
+            color: var(--blue-primary);
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <header>Controle de Processos</header>
+
+    <div class="container">
+        <div id="agenda" class="section active">
+            {% for item in agenda %}
+            <div class="card">
+                <h3>📆 {{ item.tipo or 'Audiência/Prazo' }}</h3>
+                <p><strong>Processo:</strong> {{ item.processo_numero }}</p>
+                <p><strong>Data/Hora:</strong> {{ item.data_hora }}</p>
+                <p><strong>Descrição:</strong> {{ item.descricao }}</p>
+            </div>
+            {% else %}
+            <p>Nenhuma audiência ou prazo agendado.</p>
+            {% endfor %}
+        </div>
+
+        <div id="processos" class="section">
+            {% for proc in processos %}
+            <div class="card">
+                <h3>📁 {{ proc.numero_processo or proc.numero }}</h3>
+                <p><strong>Ação:</strong> {{ proc.acao }}</p>
+                <p><strong>Vara:</strong> {{ proc.vara }}</p>
+            </div>
+            {% else %}
+            <p>Nenhum processo cadastrado.</p>
+            {% endfor %}
+        </div>
+
+        <div id="clientes" class="section">
+            {% for cli in clientes %}
+            <div class="card">
+                <h3>👤 {{ cli.nome }}</h3>
+                <p><strong>CPF/CNPJ:</strong> {{ cli.cpf_cnpj or cli.cpf }}</p>
+                <p><strong>Telefone:</strong> {{ cli.telefone }}</p>
+            </div>
+            {% else %}
+            <p>Nenhum cliente cadastrado.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <nav class="bottom-nav">
+        <button class="nav-item active" onclick="showTab('agenda', this)">
+            📆 Agenda
+        </button>
+        <button class="nav-item" onclick="showTab('processos', this)">
+            📁 Processos
+        </button>
+        <button class="nav-item" onclick="showTab('clientes', this)">
+            👤 Clientes
+        </button>
+    </nav>
+
+    <script>
+        function showTab(tabId, element) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            element.classList.add('active');
+        }
+    </script>
+</body>
+</html>
