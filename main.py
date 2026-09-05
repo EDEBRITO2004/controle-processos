@@ -209,8 +209,8 @@ async def home():
 
         prazos_html += f"""
         <div class="card card-prazo item-prazo status-{categoria_prazo}">
-            <h3>⏳ Data Cumprimento: {data_cump}</h3>
-            <p><strong>Vencimento:</strong> {data_venc}</p>
+            <h3>⏳ Data de Cumprimento: {data_cump}</h3>
+            <p><strong>Publicação:</strong> {data_venc}</p>
             {f'<p><strong>Processo:</strong> {identificacao_proc}</p>' if identificacao_proc else ''}
             <p><strong>Cliente:</strong> {cliente}</p>
             <p><strong>Manifestação:</strong> {manifestacao}</p>
