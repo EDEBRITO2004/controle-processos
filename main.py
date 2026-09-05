@@ -51,7 +51,8 @@ async def home():
         except Exception as e:
             print(f"Erro Processos Join: {e}")
             conn.rollback()
-        # Busca Agenda com Horário
+
+        # 3. Busca Agenda com Horário (Apenas pendentes, ordenado por data e hora)
         try:
             cursor.execute("""
                 SELECT 
@@ -72,8 +73,6 @@ async def home():
             print(f"Erro Agenda Join: {e}")
             conn.rollback()
 
-
-
         cursor.close()
         conn.close()
     except Exception as err:
@@ -90,6 +89,18 @@ async def home():
         # Cliente vindo do JOIN ou da própria tabela Agenda
         cliente = item.get('cliente_nome') or item.get('cliente_empresa') or item.get('NomeCli') or 'Não informado'
         
+        # Formatação do Horário (HH:MM)
+        raw_hora = item.get('horario_compromisso') or item.get('Horário')
+        hora_fmt = ""
+        if raw_hora:
+            if hasattr(raw_hora, 'strftime'):
+                hora_fmt = raw_hora.strftime('%H:%M')
+            else:
+                try:
+                    hora_fmt = str(raw_hora).strip()[:5]
+                except Exception:
+                    hora_fmt = str(raw_hora)
+
         # Formatação de Data (DD/MM/AAAA)
         raw_data = item.get('Data')
         data_fmt = 'N/A'
@@ -103,6 +114,9 @@ async def home():
                 except Exception:
                     data_fmt = str(raw_data)
 
+        # Exibe "HH:MM - DD/MM/AAAA" ou apenas "DD/MM/AAAA"
+        data_hora_exibicao = f"{hora_fmt} - {data_fmt}" if hora_fmt else data_fmt
+
         # Monta a identificação do processo
         identificacao_proc = cod_novo
         if num_proc and num_proc != cod_novo:
@@ -111,7 +125,7 @@ async def home():
         agenda_html += f"""
         <div class="card">
             <h3>⏳ {tipo}</h3>
-            <p><strong>Data:</strong> {data_fmt}</p>
+            <p><strong>Data/Hora:</strong> {data_hora_exibicao}</p>
             {f'<p><strong>Processo:</strong> {identificacao_proc}</p>' if identificacao_proc else ''}
             <p><strong>Cliente:</strong> {cliente}</p>
             <p><strong>Descrição:</strong> {desc}</p>
