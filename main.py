@@ -63,7 +63,7 @@ async def home():
             print(f"Erro Processos Join: {e}")
             conn.rollback()
 
-        # 3. Busca Agenda (Filtro por não cumprido flexível)
+        # 3. Busca Agenda
         try:
             cursor.execute("""
                 SELECT 
@@ -86,7 +86,7 @@ async def home():
             print(f"Erro Agenda Join: {e}")
             conn.rollback()
 
-        # 4. Busca Publicações/Prazos (Filtro por não cumprido flexível)
+        # 4. Busca Publicações/Prazos (Apenas onde DataCumprimento NÃO é nula)
         try:
             cursor.execute("""
                 SELECT 
@@ -97,10 +97,8 @@ async def home():
                 FROM "Publicações" pub
                 LEFT JOIN "Processos" p ON pub."ProcessoNovoCod1" = p."ProcessoNovoCod1"
                 LEFT JOIN "Clientes" c ON p."CodCli" = c."CodCli"
-                WHERE pub."Cumprido" IS NULL 
-                   OR pub."Cumprido" = FALSE 
-                   OR CAST(pub."Cumprido" AS TEXT) IN ('0', 'false', 'FALSE', 'f', 'F', 'no', 'NO')
-                ORDER BY pub."DataCumprimento" ASC
+                WHERE pub."DataCumprimento" IS NOT NULL
+                ORDER BY pub."DataCumprimento" DESC
                 LIMIT 30;
             """)
             prazos = cursor.fetchall()
@@ -134,8 +132,6 @@ async def home():
                     hora_fmt = str(raw_hora)
 
         data_fmt = formatar_data(item.get('Data'))
-        
-        # Formato alterado para "Data - Horário"
         data_hora_exibicao = f"{data_fmt} - {hora_fmt}" if hora_fmt else data_fmt
 
         identificacao_proc = cod_novo
@@ -181,7 +177,7 @@ async def home():
         </div>
         """
     if not prazos:
-        prazos_html = "<p style='padding:15px;'>Nenhum prazo pendente encontrado.</p>"
+        prazos_html = "<p style='padding:15px;'>Nenhum prazo cumprido encontrado.</p>"
 
     # Renderiza Processos
     processos_html = ""
