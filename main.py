@@ -88,7 +88,7 @@ async def home():
             print(f"Erro Agenda Join: {e}")
             conn.rollback()
 
-        # 4. Publicações / Prazos (Traz todos com DataCumprimento IS NOT NULL)
+        # 4. Publicações / Prazos (Apenas com DataCumprimento preenchida)
         try:
             cursor.execute("""
                 SELECT 
@@ -100,7 +100,7 @@ async def home():
                 LEFT JOIN "Processos" p ON pub."ProcessoNovoCod1" = p."ProcessoNovoCod1"
                 LEFT JOIN "Clientes" c ON p."CodCli" = c."CodCli"
                 WHERE pub."DataCumprimento" IS NOT NULL
-                ORDER BY pub."DataVencimento" ASC
+                ORDER BY pub."DataCumprimento" ASC
                 LIMIT 100;
             """)
             prazos = cursor.fetchall()
@@ -152,7 +152,7 @@ async def home():
     if not agenda:
         agenda_html = "<p style='padding:15px;'>Nenhum registro pendente na Agenda.</p>"
 
-    # Renderiza Prazos com categorias
+    # Renderiza Prazos com a nova classificação por DataCumprimento
     prazos_html = ""
     counts = {"vencidos": 0, "vencendo": 0, "a_vencer": 0}
 
@@ -161,25 +161,25 @@ async def home():
         num_proc = prazo.get('numero_processo') or ''
         cliente = prazo.get('cliente_nome') or prazo.get('cliente_empresa') or 'Não informado'
         
-        dt_venc_raw = prazo.get('DataVencimento') or prazo.get('Data')
-        data_venc = formatar_data(dt_venc_raw)
-        data_cump = formatar_data(prazo.get('DataCumprimento'))
+        dt_cump_raw = prazo.get('DataCumprimento')
+        data_cump = formatar_data(dt_cump_raw)
+        data_venc = formatar_data(prazo.get('DataVencimento') or prazo.get('Data'))
         manifestacao = prazo.get('Manifestação') or prazo.get('Manifestacao') or 'Não informada'
         publicacao = prazo.get('Publicação') or prazo.get('Publicacao') or prazo.get('Texto') or 'Sem publicação'
 
-        # Lógica de Classificação de Prazo
+        # Classificação do Prazo baseada estritamente na DataCumprimento vs Hoje
         categoria_prazo = "a_vencer"
-        if hasattr(dt_venc_raw, 'date'):
-            dt_venc_obj = dt_venc_raw.date()
-        elif isinstance(dt_venc_raw, date):
-            dt_venc_obj = dt_venc_raw
+        if hasattr(dt_cump_raw, 'date'):
+            dt_cump_obj = dt_cump_raw.date()
+        elif isinstance(dt_cump_raw, date):
+            dt_cump_obj = dt_cump_raw
         else:
-            dt_venc_obj = None
+            dt_cump_obj = None
 
-        if dt_venc_obj:
-            if dt_venc_obj < hoje:
+        if dt_cump_obj:
+            if dt_cump_obj < hoje:
                 categoria_prazo = "vencidos"
-            elif dt_venc_obj == hoje:
+            elif dt_cump_obj == hoje:
                 categoria_prazo = "vencendo"
             else:
                 categoria_prazo = "a_vencer"
@@ -192,8 +192,8 @@ async def home():
 
         prazos_html += f"""
         <div class="card card-prazo item-prazo status-{categoria_prazo}">
-            <h3>⏳ Vencimento: {data_venc}</h3>
-            <p><strong>Data Cumprimento:</strong> {data_cump}</p>
+            <h3>⏳ Data Cumprimento: {data_cump}</h3>
+            <p><strong>Vencimento:</strong> {data_venc}</p>
             {f'<p><strong>Processo:</strong> {identificacao_proc}</p>' if identificacao_proc else ''}
             <p><strong>Cliente:</strong> {cliente}</p>
             <p><strong>Manifestação:</strong> {manifestacao}</p>
@@ -204,11 +204,11 @@ async def home():
         </div>
         """
 
-    # Mensagens de lista vazia para cada categoria
+    # Mensagens de lista vazia para cada filtro
     prazos_html += f"""
-    <div class="empty-msg msg-vencidos" style="display:none; padding:15px; color:#6c757d;">Nenhum prazo vencido encontrado.</div>
-    <div class="empty-msg msg-vencendo" style="display:none; padding:15px; color:#6c757d;">Nenhum prazo vencendo hoje encontrado.</div>
-    <div class="empty-msg msg-a_vencer" style="display:none; padding:15px; color:#6c757d;">Nenhum prazo a vencer encontrado.</div>
+    <div class="empty-msg msg-vencidos" style="display:none; padding:15px; color:#6c757d;">Nenhum prazo com Data Cumprimento anterior a hoje.</div>
+    <div class="empty-msg msg-vencendo" style="display:none; padding:15px; color:#6c757d;">Nenhum prazo com Data Cumprimento para hoje.</div>
+    <div class="empty-msg msg-a_vencer" style="display:none; padding:15px; color:#6c757d;">Nenhum prazo com Data Cumprimento posterior a hoje.</div>
     """
 
     # Renderiza Processos
