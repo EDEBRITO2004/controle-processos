@@ -63,7 +63,7 @@ async def home():
             print(f"Erro Processos Join: {e}")
             conn.rollback()
 
-        # 3. Busca Agenda (Filtro por Cumprido = FALSE)
+        # 3. Busca Agenda (Filtro por não cumprido flexível)
         try:
             cursor.execute("""
                 SELECT 
@@ -75,7 +75,9 @@ async def home():
                 FROM "Agenda" a
                 LEFT JOIN "Processos" p ON a."ProcessoNovoCod1" = p."ProcessoNovoCod1"
                 LEFT JOIN "Clientes" c ON p."CodCli" = c."CodCli"
-                WHERE a."Cumprido" = FALSE OR a."Cumprido" IS NULL 
+                WHERE a."Cumprido" IS NULL 
+                   OR a."Cumprido" = FALSE 
+                   OR CAST(a."Cumprido" AS TEXT) IN ('0', 'false', 'FALSE', 'f', 'F', 'no', 'NO')
                 ORDER BY a."Data" ASC, a."Horário" ASC 
                 LIMIT 30;
             """)
@@ -84,7 +86,7 @@ async def home():
             print(f"Erro Agenda Join: {e}")
             conn.rollback()
 
-        # 4. Busca Publicações/Prazos (Filtro por Cumprido = FALSE)
+        # 4. Busca Publicações/Prazos (Filtro por não cumprido flexível)
         try:
             cursor.execute("""
                 SELECT 
@@ -95,7 +97,9 @@ async def home():
                 FROM "Publicações" pub
                 LEFT JOIN "Processos" p ON pub."ProcessoNovoCod1" = p."ProcessoNovoCod1"
                 LEFT JOIN "Clientes" c ON p."CodCli" = c."CodCli"
-                WHERE pub."Cumprido" = FALSE OR pub."Cumprido" IS NULL
+                WHERE pub."Cumprido" IS NULL 
+                   OR pub."Cumprido" = FALSE 
+                   OR CAST(pub."Cumprido" AS TEXT) IN ('0', 'false', 'FALSE', 'f', 'F', 'no', 'NO')
                 ORDER BY pub."DataVencimento" ASC
                 LIMIT 30;
             """)
@@ -130,7 +134,9 @@ async def home():
                     hora_fmt = str(raw_hora)
 
         data_fmt = formatar_data(item.get('Data'))
-        data_hora_exibicao = f"{hora_fmt} - {data_fmt}" if hora_fmt else data_fmt
+        
+        # Formato alterado para "Data - Horário"
+        data_hora_exibicao = f"{data_fmt} - {hora_fmt}" if hora_fmt else data_fmt
 
         identificacao_proc = cod_novo
         if num_proc and num_proc != cod_novo:
@@ -139,7 +145,7 @@ async def home():
         agenda_html += f"""
         <div class="card">
             <h3>📆 {tipo}</h3>
-            <p><strong>Data/Hora:</strong> {data_hora_exibicao}</p>
+            <p><strong>Data:</strong> {data_hora_exibicao}</p>
             {f'<p><strong>Processo:</strong> {identificacao_proc}</p>' if identificacao_proc else ''}
             <p><strong>Cliente:</strong> {cliente}</p>
             <p><strong>Descrição:</strong> {desc}</p>
