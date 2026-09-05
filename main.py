@@ -22,23 +22,37 @@ async def home():
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Clientes
+        # Busca Clientes
         try:
-            cursor.execute('SELECT * FROM "Clientes" LIMIT 30;')
+            cursor.execute('SELECT * FROM "Clientes" ORDER BY "Nomecli" ASC LIMIT 30;')
             clientes = cursor.fetchall()
         except Exception as e:
             print(f"Erro Clientes: {e}")
             conn.rollback()
 
-        # Processos sem JOIN para evitar erros de relacionamento/tipagem
+        # Consulta unindo Processos com Clientes e Ações usando os nomes exatos do models.py
         try:
-            cursor.execute('SELECT * FROM "Processos" LIMIT 30;')
+            cursor.execute("""
+                SELECT 
+                    p."ProcessoNovoCod1",
+                    p."Processo",
+                    p."Parte Contrária" AS parte_contraria,
+                    p."Vara",
+                    c."Nomecli" AS cliente_nome,
+                    c."Empresa" AS cliente_empresa,
+                    a."Ação" AS acao_nome
+                FROM "Processos" p
+                LEFT JOIN "Clientes" c ON p."CodCli" = c."CodCli"
+                LEFT JOIN "Ações" a ON p."Ação" = a."Código"
+                ORDER BY p."Código" DESC
+                LIMIT 30;
+            """)
             processos = cursor.fetchall()
         except Exception as e:
-            print(f"Erro Processos: {e}")
+            print(f"Erro Processos Join: {e}")
             conn.rollback()
 
-        # Agenda
+        # Busca Agenda
         try:
             cursor.execute('SELECT * FROM "Agenda" LIMIT 30;')
             agenda = cursor.fetchall()
@@ -51,50 +65,40 @@ async def home():
     except Exception as err:
         print(f"Erro Conexao: {err}")
 
-    # Auxiliar para tratar valores vazios/None/False
-    def get_val(item, keywords, default="N/A"):
-        for k, v in item.items():
-            if any(kw in k.lower() for kw in keywords):
-                if v not in [None, "", False]:
-                    return str(v)
-        return default
-
     # Renderiza Agenda
     agenda_html = ""
     for item in agenda:
-        tipo = get_val(item, ['tipo', 'evento'], 'Compromisso')
-        desc = get_val(item, ['desc', 'titulo', 'assunto'], 'Sem descrição')
-        data = get_val(item, ['data'], 'N/A')
+        tipo = item.get('Tipo') or 'Compromisso'
+        desc = item.get('Tarefa') or item.get('Observações') or 'Sem descrição'
+        data = item.get('Data') or 'N/A'
         
         agenda_html += f"""
         <div class="card">
             <h3>⏳ {tipo}</h3>
-            <p><strong>Data/Hora:</strong> {data}</p>
+            <p><strong>Data:</strong> {data}</p>
             <p><strong>Descrição:</strong> {desc}</p>
         </div>
         """
     if not agenda:
-        agenda_html = "<p style='padding:15px;'>Nenhum registro encontrado na Agenda.</p>"
+        agenda_html = "<p style='padding:15px;'>Nenhum registro na Agenda.</p>"
 
     # Renderiza Processos
     processos_html = ""
     for proc in processos:
-        # Busca o código do processo (processonovocod1)
-        cod_novo = get_val(proc, ['processonovocod1'], 'Sem Código')
+        cod_novo = proc.get('ProcessoNovoCod1') or 'Sem Cód. Novo'
+        num_proc = proc.get('Processo') or ''
         
-        # Busca o número judicial/original
-        num_jud = get_val(proc, ['numeroprocesso', 'numprocesso', 'numero'], 'N/A')
+        # Nome do Cliente (Nomecli ou Empresa)
+        cliente = proc.get('cliente_nome') or proc.get('cliente_empresa') or 'Não informado'
         
-        # Busca Cliente, Parte Contrária, Ação e Vara
-        cliente = get_val(proc, ['nomecliente', 'cliente', 'codcli'])
-        parte_contraria = get_val(proc, ['partecontraria', 'contraria', 'reu', 'réu'])
-        acao = get_val(proc, ['nomeacao', 'acao', 'ação'])
-        vara = get_val(proc, ['vara', 'juizo'])
+        parte_contraria = proc.get('parte_contraria') or 'Não informada'
+        acao = proc.get('acao_nome') or 'Não informada'
+        vara = proc.get('Vara') or 'Não informada'
         
         processos_html += f"""
         <div class="card">
-            <h3>📁 Processo: {cod_novo}</h3>
-            <p><strong>Nº Judicial:</strong> {num_jud}</p>
+            <h3>📁 {cod_novo}</h3>
+            {f'<p><strong>Nº Processo:</strong> {num_proc}</p>' if num_proc else ''}
             <p><strong>Cliente:</strong> {cliente}</p>
             <p><strong>Parte Contrária:</strong> {parte_contraria}</p>
             <p><strong>Ação:</strong> {acao}</p>
@@ -107,9 +111,9 @@ async def home():
     # Renderiza Clientes
     clientes_html = ""
     for cli in clientes:
-        nome = get_val(cli, ['nome', 'cliente', 'razao'], 'Sem Nome')
-        doc = get_val(cli, ['cpf', 'cnpj', 'doc'], 'N/A')
-        tel = get_val(cli, ['tel', 'cel', 'fone'], 'N/A')
+        nome = cli.get('Nomecli') or cli.get('Empresa') or 'Sem Nome'
+        doc = cli.get('CPF_CNPJ') or 'N/A'
+        tel = cli.get('NúmeroTelefone') or 'N/A'
         
         clientes_html += f"""
         <div class="card">
