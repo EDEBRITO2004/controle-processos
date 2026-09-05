@@ -213,7 +213,7 @@ async def home():
             <p><strong>Publicação:</strong> {data_venc}</p>
             {f'<p><strong>Processo:</strong> {identificacao_proc}</p>' if identificacao_proc else ''}
             <p><strong>Cliente:</strong> {cliente}</p>
-            <p><strong>Manifestação:</strong> {manifestacao}</p>
+            <p><strong>Providência:</strong> {manifestacao}</p>
             <details class="pub-details">
                 <summary>▶ Ver publicação</summary>
                 <div class="pub-content">{publicacao}</div>
