@@ -47,7 +47,7 @@ async def home():
 
         # 1. Clientes
         try:
-            cursor.execute('SELECT * FROM "Clientes" ORDER BY "Nomecli" ASC LIMIT 100;')
+            cursor.execute('SELECT * FROM "Clientes" ORDER BY "Nomecli" ASC;')
             clientes = cursor.fetchall()
         except Exception as e:
             print(f"Erro Clientes: {e}")
@@ -68,8 +68,7 @@ async def home():
                 FROM "Processos" p
                 LEFT JOIN "Clientes" c ON p."CodCli" = c."CodCli"
                 LEFT JOIN "Ações" a ON p."Ação" = a."Código"
-                ORDER BY p."Código" DESC
-                LIMIT 100;
+                ORDER BY p."Código" DESC;
             """)
             processos = cursor.fetchall()
         except Exception as e:
@@ -92,7 +91,7 @@ async def home():
                    OR a."Cumprido" = FALSE 
                    OR CAST(a."Cumprido" AS TEXT) IN ('0', 'false', 'FALSE', 'f', 'F', 'no', 'NO')
                 ORDER BY a."Data" ASC, a."Horário" ASC 
-                LIMIT 50;
+                ;
             """)
             agenda = cursor.fetchall()
         except Exception as e:
