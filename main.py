@@ -1,3 +1,4 @@
+Aqui está o código completo do main.py com a consulta SQL atualizada (fazendo o LEFT JOIN com a tabela Sistemas), tratamento do campo Sistema e a renderização do botão com o ícone 🔗 direcionando para o link correspondente:
 import os
 from datetime import date
 from fastapi import FastAPI
@@ -298,7 +299,7 @@ async def home():
             print(f"Erro Clientes: {e}")
             conn.rollback()
 
-        # 2. Processos
+        # 2. Processos (incluindo JOIN com a tabela Sistemas)
         try:
             cursor.execute("""
                 SELECT 
@@ -309,10 +310,13 @@ async def home():
                     p."Vara",
                     c."Nomecli" AS cliente_nome,
                     c."Empresa" AS cliente_empresa,
-                    a."Ação" AS acao_nome
+                    a."Ação" AS acao_nome,
+                    s."Sistema" AS sistema_nome,
+                    s."Link" AS sistema_link
                 FROM "Processos" p
                 LEFT JOIN "Clientes" c ON p."CodCli" = c."CodCli"
                 LEFT JOIN "Ações" a ON p."Ação" = a."Código"
+                LEFT JOIN "Sistemas" s ON p."Sistema" = s."Código"
                 ORDER BY p."Código" DESC;
             """)
             processos = cursor.fetchall()
@@ -342,9 +346,7 @@ async def home():
             print(f"Erro Agenda Join: {e}")
             conn.rollback()
 
-        # 4. Publicações / Prazos (sem filtro rígido no WHERE — o filtro de "já cumprido"
-        #    é feito no Python usando o campo booleano "Cumprido", para não zerar a lista
-        #    caso o campo venha em formatos diferentes do banco)
+        # 4. Publicações / Prazos
         try:
             cursor.execute("""
                 SELECT 
@@ -419,16 +421,11 @@ async def home():
     if not agenda:
         agenda_html = "<p style='padding:15px;'>Nenhum registro pendente na Agenda.</p>"
 
-    # Renderiza Prazos (tabela "Publicações")
-    # Colunas reais confirmadas no models.py: Data, Publicação, Prazo, DataCumprimento,
-    # HoraCumprimento, Cumprido (boolean), Observações, Manifestação.
-    # NÃO existe "DataVencimento" nessa tabela — a data de referência do prazo é "DataCumprimento".
+    # Renderiza Prazos
     prazos_html = ""
     counts = {"vencidos": 0, "vencendo": 0, "a_vencer": 0}
 
     for prazo in prazos:
-        # "Já cumprido?" -> usa exclusivamente o campo booleano "Cumprido",
-        # sem misturar com a data "DataCumprimento" (que é a data-limite, não um booleano)
         cumprido_flag = get_val(prazo, 'Cumprido')
         if cumprido_flag in [True, 1, '1', 'true', 'TRUE', 't', 'T', 'yes', 'YES']:
             continue
@@ -437,7 +434,6 @@ async def home():
         num_proc = get_val(prazo, 'numero_processo', 'Processo') or ''
         cliente = get_val(prazo, 'cliente_nome', 'cliente_empresa') or 'Não informado'
 
-        # Data de referência do prazo = DataCumprimento (data-limite para cumprir)
         dt_ref_raw = get_val(prazo, 'DataCumprimento')
         data_cumprimento_fmt = formatar_data(dt_ref_raw)
         data_publicacao_fmt = formatar_data(get_val(prazo, 'Data'))
@@ -512,9 +508,30 @@ async def home():
         parte_contraria = get_val(proc, 'parte_contraria') or 'Não informada'
         acao = get_val(proc, 'acao_nome') or 'Não informada'
         vara = get_val(proc, 'Vara') or 'Não informada'
+        
+        sistema_nome = get_val(proc, 'sistema_nome') or ''
+        sistema_link = get_val(proc, 'sistema_link') or ''
 
-        texto_busca = f"{cod_novo} {num_proc} {cliente} {parte_contraria} {acao} {vara}".lower()
+        # Botão de Link para o Sistema
+        if sistema_link and str(sistema_link).strip():
+            url = str(sistema_link).strip()
+            if not url.startswith(('http://', 'https://')):
+                url = 'https://' + url
+            btn_link_html = f'''
+            <a href="{url}" target="_blank" style="display:inline-block; margin-top:8px; padding:6px 12px; background-color:#0d6efd; color:white; text-decoration:none; border-radius:6px; font-size:0.85rem; font-weight:bold;">
+                🔗 Acessar {sistema_nome or "Sistema"}
+            </a>
+            '''
+        else:
+            btn_link_html = '''
+            <button onclick="alert('Nenhum link cadastrado para este sistema.')" style="margin-top:8px; padding:6px 12px; background-color:#6c757d; color:white; border:none; border-radius:6px; font-size:0.85rem; cursor:pointer;">
+                🔗 Sem link cadastrado
+            </button>
+            '''
+
+        texto_busca = f"{cod_novo} {num_proc} {cliente} {parte_contraria} {acao} {vara} {sistema_nome}".lower()
         proc_num_line = f"<p><strong>Nº Processo:</strong> {num_proc}</p>" if num_proc else ""
+        sistema_line = f"<p><strong>Sistema:</strong> {sistema_nome}</p>" if sistema_nome else ""
 
         processos_html += (
             f'<div class="card card-item-processo" data-search="{texto_busca}">'
@@ -524,6 +541,8 @@ async def home():
             f'<p><strong>Parte Contrária:</strong> {parte_contraria}</p>'
             f'<p><strong>Ação:</strong> {acao}</p>'
             f'<p><strong>Vara/Juízo:</strong> {vara}</p>'
+            f'{sistema_line}'
+            f'{btn_link_html}'
             '</div>'
         )
     processos_html += "</div>"
@@ -531,9 +550,6 @@ async def home():
         processos_html = "<p style='padding:15px;'>Nenhum processo encontrado.</p>"
 
     # Renderiza Clientes
-    # Colunas reais confirmadas no models.py: Nomecli, Empresa, CPF_CNPJ, RG_IE (não "RG"),
-    # NúmeroTelefone, EndCli (endereço único, não separado em rua/número/bairro),
-    # CidaCli (não "Cidade"), CEP. Não existem colunas de Bairro, Número ou Estado/UF.
     clientes_html = """
     <div class="search-box">
         <input type="text" id="search-clientes" placeholder="🔍 Buscar por nome, CPF/CNPJ, cidade..." onkeyup="filtrarClientes()">
@@ -612,3 +628,4 @@ async def home():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
+
