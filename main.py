@@ -87,9 +87,9 @@ async def home():
                 FROM "Agenda" a
                 LEFT JOIN "Processos" p ON a."ProcessoNovoCod1" = p."ProcessoNovoCod1"
                 LEFT JOIN "Clientes" c ON p."CodCli" = c."CodCli"
-                WHERE a."cumprido" IS NULL 
-                   OR a."cumprido" = FALSE 
-                   OR CAST(a."cumprido" AS TEXT) IN ('0', 'false', 'FALSE', 'f', 'F', 'no', 'NO')
+                WHERE a."Cumprido" IS NULL 
+                   OR a."Cumprido" = FALSE 
+                   OR CAST(a."Cumprido" AS TEXT) IN ('0', 'false', 'FALSE', 'f', 'F', 'no', 'NO')
                 ORDER BY a."Data" ASC, a."Horário" ASC 
                 LIMIT 50;
             """)
