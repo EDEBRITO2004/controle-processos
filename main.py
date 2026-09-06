@@ -159,11 +159,13 @@ async def home():
         if num_proc and num_proc != cod_novo:
             identificacao_proc += f" ({num_proc})" if cod_novo else num_proc
 
+        proc_line = f"<p><strong>Processo:</strong> {identificacao_proc}</p>" if identificacao_proc else ""
+
         agenda_html += f"""
         <div class="card">
             <h3>📆 {tipo}</h3>
             <p><strong>Data:</strong> {data_hora_exibicao}</p>
-            {f'<p><strong>Processo:</strong> {identificacao_proc}</p>' if identificacao_proc else ''}
+            {proc_line}
             <p><strong>Cliente:</strong> {cliente}</p>
             <p><strong>Descrição:</strong> {desc}</p>
         </div>
@@ -215,11 +217,13 @@ async def home():
         if num_proc and num_proc != cod_novo:
             identificacao_proc += f" ({num_proc})" if cod_novo else num_proc
 
+        proc_line = f"<p><strong>Processo:</strong> {identificacao_proc}</p>" if identificacao_proc else ""
+
         prazos_html += f"""
         <div class="card card-prazo item-prazo status-{categoria_prazo}">
             <h3>⏳ Data Cumprimento: {data_cump}</h3>
             <p><strong>Vencimento:</strong> {data_venc}</p>
-            {f'<p><strong>Processo:</strong> {identificacao_proc}</p>' if identificacao_proc else ''}
+            {proc_line}
             <p><strong>Cliente:</strong> {cliente}</p>
             <p><strong>Manifestação:</strong> {manifestacao}</p>
             <details class="pub-details">
@@ -229,7 +233,7 @@ async def home():
         </div>
         """
 
-    prazos_html += f"""
+    prazos_html += """
     <div class="empty-msg msg-vencidos" style="display:none; padding:15px; color:#6c757d;">Nenhum prazo com Data Cumprimento anterior a hoje.</div>
     <div class="empty-msg msg-vencendo" style="display:none; padding:15px; color:#6c757d;">Nenhum prazo com Data Cumprimento para hoje.</div>
     <div class="empty-msg msg-a_vencer" style="display:none; padding:15px; color:#6c757d;">Nenhum prazo com Data Cumprimento posterior a hoje.</div>
@@ -251,11 +255,12 @@ async def home():
         vara = proc.get('Vara') or 'Não informada'
         
         texto_busca = f"{cod_novo} {num_proc} {cliente} {parte_contraria} {acao} {vara}".lower()
+        proc_num_line = f"<p><strong>Nº Processo:</strong> {num_proc}</p>" if num_proc else ""
 
         processos_html += f"""
         <div class="card card-item-processo" data-search="{texto_busca}">
             <h3>📁 {cod_novo}</h3>
-            {f'<p><strong>Nº Processo:</strong> {num_proc}</p>' if num_proc else ''}
+            {proc_num_line}
             <p><strong>Cliente:</strong> {cliente}</p>
             <p><strong>Parte Contrária:</strong> {parte_contraria}</p>
             <p><strong>Ação:</strong> {acao}</p>
@@ -328,6 +333,10 @@ async def home():
     clientes_html += "</div>"
     if not clientes:
         clientes_html = "<p style='padding:15px;'>Nenhum cliente encontrado.</p>"
+
+    cnt_vencidos = counts['vencidos']
+    cnt_vencendo = counts['vencendo']
+    cnt_a_vencer = counts['a_vencer']
 
     html_content = f"""
     <!DOCTYPE html>
@@ -479,9 +488,9 @@ async def home():
         <div class="container">
             <div id="prazos" class="section active">
                 <div class="sub-filter-bar">
-                    <button class="btn-sub-filter" onclick="filtrarPrazos('vencidos', this)">Vencidos ({counts['vencidos']})</button>
-                    <button class="btn-sub-filter" onclick="filtrarPrazos('vencendo', this)">Vencendo ({counts['vencendo']})</button>
-                    <button class="btn-sub-filter active" onclick="filtrarPrazos('a_vencer', this)">A vencer ({counts['a_vencer']})</button>
+                    <button class="btn-sub-filter" onclick="filtrarPrazos('vencidos', this)">Vencidos ({cnt_vencidos})</button>
+                    <button class="btn-sub-filter" onclick="filtrarPrazos('vencendo', this)">Vencendo ({cnt_vencendo})</button>
+                    <button class="btn-sub-filter active" onclick="filtrarPrazos('a_vencer', this)">A vencer ({cnt_a_vencer})</button>
                 </div>
                 <div id="prazos-list">
                     {prazos_html}
@@ -498,6 +507,4 @@ async def home():
             <button class="nav-item" onclick="showTab('clientes', this)">👤 Clientes</button>
         </nav>
         <script>
-            function showTab(tabId, element) {{
-                document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-                document.querySelectorAll('.nav-item').forEach(n => n.classLis
+            function showTab
