@@ -310,11 +310,13 @@ async def home():
         clientes_html += f"""
         <div class="card card-item-cliente" data-search="{texto_busca}">
             <details class="pub-details">
-                <summary>👤 {nome}</summary>
-                <div class="pub-content">
-                    <p><strong>CPF/CNPJ:</strong> {doc}</p>
+                <summary style="cursor:pointer; outline:none;">
+                    <div style="font-size:1.05rem; font-weight:bold; color:var(--blue-dark); margin-bottom:4px;">👤 {nome}</div>
+                    <div style="font-size:0.88rem; color:#495057; font-weight:normal;"><strong>Documento:</strong> {doc}</div>
+                    <div style="font-size:0.88rem; color:#495057; font-weight:normal;"><strong>Telefone:</strong> {tel}</div>
+                </summary>
+                <div class="pub-content" style="margin-top:10px;">
                     <p><strong>RG:</strong> {rg}</p>
-                    <p><strong>Telefone:</strong> {tel}</p>
                     <p><strong>Endereço:</strong> {endereco_completo}</p>
                     <hr style="border:0; border-top:1px solid #e0e0e0; margin:8px 0;">
                     <p><strong>Processos Relacionados:</strong></p>
@@ -498,11 +500,4 @@ async def home():
         <script>
             function showTab(tabId, element) {{
                 document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-                document.getElementById(tabId).classList.add('active');
-                element.classList.add('active');
-            }}
-
-            function filtrarPrazos(status, btnElement) {{
-                document.querySelectorAll('.btn-sub-filter').forEach(b => b.classList.remove('active'));
-            
+                document.querySelectorAll('.nav-item').forEach(n => n.classLis
