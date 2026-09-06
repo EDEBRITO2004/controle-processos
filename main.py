@@ -342,7 +342,9 @@ async def home():
             print(f"Erro Agenda Join: {e}")
             conn.rollback()
 
-        # 4. Publicações / Prazos Pendentes (Sem filtro rígido no WHERE para evitar zerar)
+        # 4. Publicações / Prazos (sem filtro rígido no WHERE — o filtro de "já cumprido"
+        #    é feito no Python usando o campo booleano "Cumprido", para não zerar a lista
+        #    caso o campo venha em formatos diferentes do banco)
         try:
             cursor.execute("""
                 SELECT 
@@ -377,12 +379,12 @@ async def home():
     agenda_html = ""
     for item in agenda:
         tipo = get_val(item, 'Tipo') or 'Compromisso'
-        desc = get_val(item, 'Tarefa', 'Observações', 'Observacoes') or 'Sem descrição'
+        desc = get_val(item, 'Tarefa', 'Observações') or 'Sem descrição'
         cod_novo = get_val(item, 'ProcessoNovoCod1') or ''
         num_proc = get_val(item, 'numero_processo', 'Processo') or ''
         cliente = get_val(item, 'cliente_nome', 'cliente_empresa', 'NomeCli') or 'Não informado'
 
-        raw_hora = get_val(item, 'horario_compromisso', 'Horário', 'Horario')
+        raw_hora = get_val(item, 'horario_compromisso', 'Horário')
         hora_fmt = ""
         if raw_hora:
             if hasattr(raw_hora, 'strftime'):
@@ -414,32 +416,39 @@ async def home():
     if not agenda:
         agenda_html = "<p style='padding:15px;'>Nenhum registro pendente na Agenda.</p>"
 
-    # Renderiza Prazos
+    # Renderiza Prazos (tabela "Publicações")
+    # Colunas reais confirmadas no models.py: Data, Publicação, Prazo, DataCumprimento,
+    # HoraCumprimento, Cumprido (boolean), Observações, Manifestação.
+    # NÃO existe "DataVencimento" nessa tabela — a data de referência do prazo é "DataCumprimento".
     prazos_html = ""
     counts = {"vencidos": 0, "vencendo": 0, "a_vencer": 0}
 
     for prazo in prazos:
-        # Verifica se já está cumprido no Python para flexibilizar nomes de colunas
-        cumprido = get_val(prazo, 'DataCumprimento', 'Data_Cumprimento', 'Cumprido')
-        if cumprido in [True, 1, '1', 'true', 'TRUE', 't', 'T', 'yes', 'YES']:
+        # "Já cumprido?" -> usa exclusivamente o campo booleano "Cumprido",
+        # sem misturar com a data "DataCumprimento" (que é a data-limite, não um booleano)
+        cumprido_flag = get_val(prazo, 'Cumprido')
+        if cumprido_flag in [True, 1, '1', 'true', 'TRUE', 't', 'T', 'yes', 'YES']:
             continue
 
         cod_novo = get_val(prazo, 'ProcessoNovoCod1') or ''
         num_proc = get_val(prazo, 'numero_processo', 'Processo') or ''
         cliente = get_val(prazo, 'cliente_nome', 'cliente_empresa') or 'Não informado'
 
-        dt_venc_raw = get_val(prazo, 'DataVencimento', 'Data_Vencimento', 'DataVenc', 'Data')
-        data_venc = formatar_data(dt_venc_raw)
-        
-        manifestacao = get_val(prazo, 'Manifestação', 'Manifestacao', 'Tarefa', 'Assunto') or 'Não informada'
-        publicacao = get_val(prazo, 'Publicação', 'Publicacao', 'Texto', 'Observações', 'Observacoes') or 'Sem texto de publicação'
+        # Data de referência do prazo = DataCumprimento (data-limite para cumprir)
+        dt_ref_raw = get_val(prazo, 'DataCumprimento')
+        data_cumprimento_fmt = formatar_data(dt_ref_raw)
+        data_publicacao_fmt = formatar_data(get_val(prazo, 'Data'))
+
+        manifestacao = get_val(prazo, 'Manifestação') or 'Não informada'
+        publicacao = get_val(prazo, 'Publicação', 'Observações') or 'Sem texto de publicação'
+        prazo_desc = get_val(prazo, 'Prazo') or ''
 
         dt_ref_obj = None
-        if dt_venc_raw:
-            if hasattr(dt_venc_raw, 'date'):
-                dt_ref_obj = dt_venc_raw.date()
-            elif isinstance(dt_venc_raw, date):
-                dt_ref_obj = dt_venc_raw
+        if dt_ref_raw:
+            if hasattr(dt_ref_raw, 'date'):
+                dt_ref_obj = dt_ref_raw.date()
+            elif isinstance(dt_ref_raw, date):
+                dt_ref_obj = dt_ref_raw
 
             if dt_ref_obj and dt_ref_obj.year < 2000:
                 try:
@@ -464,10 +473,13 @@ async def home():
             identificacao_proc += f" ({num_proc})" if cod_novo else num_proc
 
         proc_line = f"<p><strong>Processo:</strong> {identificacao_proc}</p>" if identificacao_proc else ""
+        prazo_line = f"<p><strong>Prazo:</strong> {prazo_desc}</p>" if prazo_desc else ""
 
         prazos_html += (
             f'<div class="card card-prazo item-prazo status-{categoria_prazo}">'
-            f'<h3>⏳ Vencimento: {data_venc}</h3>'
+            f'<h3>⏳ Data Cumprimento: {data_cumprimento_fmt}</h3>'
+            f'<p><strong>Publicado em:</strong> {data_publicacao_fmt}</p>'
+            f'{prazo_line}'
             f'{proc_line}'
             f'<p><strong>Cliente:</strong> {cliente}</p>'
             f'<p><strong>Manifestação:</strong> {manifestacao}</p>'
@@ -495,7 +507,7 @@ async def home():
         cod_novo = get_val(proc, 'ProcessoNovoCod1') or 'Sem Cód. Novo'
         num_proc = get_val(proc, 'Processo') or ''
         cliente = get_val(proc, 'cliente_nome', 'cliente_empresa') or 'Não informado'
-        parte_contraria = get_val(proc, 'parte_contraria', 'Parte Contrária') or 'Não informada'
+        parte_contraria = get_val(proc, 'parte_contraria') or 'Não informada'
         acao = get_val(proc, 'acao_nome') or 'Não informada'
         vara = get_val(proc, 'Vara') or 'Não informada'
 
@@ -517,6 +529,9 @@ async def home():
         processos_html = "<p style='padding:15px;'>Nenhum processo encontrado.</p>"
 
     # Renderiza Clientes
+    # Colunas reais confirmadas no models.py: Nomecli, Empresa, CPF_CNPJ, RG_IE (não "RG"),
+    # NúmeroTelefone, EndCli (endereço único, não separado em rua/número/bairro),
+    # CidaCli (não "Cidade"), CEP. Não existem colunas de Bairro, Número ou Estado/UF.
     clientes_html = """
     <div class="search-box">
         <input type="text" id="search-clientes" placeholder="🔍 Buscar por nome, CPF/CNPJ, cidade..." onkeyup="filtrarClientes()">
@@ -526,17 +541,72 @@ async def home():
     for cli in clientes:
         cod_cli = get_val(cli, 'CodCli')
         nome = get_val(cli, 'Nomecli', 'Empresa') or 'Sem Nome'
-        doc = get_val(cli, 'CPF_CNPJ', 'Cpf_Cnpj', 'CPF') or 'N/A'
-        rg = get_val(cli, 'RG', 'Rg') or 'N/A'
-        tel = get_val(cli, 'NúmeroTelefone', 'Telefone', 'Celular') or 'N/A'
+        doc = get_val(cli, 'CPF_CNPJ') or 'N/A'
+        rg = get_val(cli, 'RG_IE') or 'N/A'
+        tel = get_val(cli, 'NúmeroTelefone') or 'N/A'
 
-        rua = get_val(cli, 'Endereço', 'Endereco') or ''
-        num = get_val(cli, 'Número', 'Numero') or ''
-        bairro = get_val(cli, 'Bairro') or ''
-        cidade = get_val(cli, 'Cidade') or ''
-        uf = get_val(cli, 'Estado', 'UF') or ''
+        endereco_rua = get_val(cli, 'EndCli') or ''
+        cidade = get_val(cli, 'CidaCli') or ''
+        cep = get_val(cli, 'CEP') or ''
 
-        partes_end = [p for p in [rua, num, bairro, cidade, uf] if p]
+        partes_end = [p for p in [endereco_rua, cidade, cep] if p]
         endereco_completo = ", ".join(partes_end) if partes_end else "Não informado"
 
-        procs_cli = processos_por_cliente.get(cod_cli, [
+        procs_cli = processos_por_cliente.get(cod_cli, [])
+        procs_html = ""
+        if procs_cli:
+            for p_item in procs_cli:
+                c_num = get_val(p_item, 'ProcessoNovoCod1') or 'Sem Cód.'
+                num_p = get_val(p_item, 'Processo') or ''
+                a_nome = get_val(p_item, 'acao_nome') or 'Ação N/I'
+
+                ident = c_num
+                if num_p and num_p != c_num:
+                    ident += f" ({num_p})"
+                procs_html += f"<li><strong>{ident}</strong> - {a_nome}</li>"
+            procs_html = f"<ul class='sub-proc-list'>{procs_html}</ul>"
+        else:
+            procs_html = "<p style='font-size:0.85rem; color:#6c757d; margin-top:4px;'>Nenhum processo vinculado.</p>"
+
+        texto_busca = f"{nome} {doc} {rg} {tel} {endereco_completo}".lower()
+
+        clientes_html += (
+            f'<div class="card card-item-cliente" data-search="{texto_busca}">'
+            '<details class="pub-details">'
+            '<summary style="cursor:pointer; outline:none;">'
+            f'<div style="font-size:1.05rem; font-weight:bold; color:var(--blue-dark); margin-bottom:4px;">👤 {nome}</div>'
+            f'<div style="font-size:0.88rem; color:#495057; font-weight:normal;"><strong>Documento:</strong> {doc}</div>'
+            f'<div style="font-size:0.88rem; color:#495057; font-weight:normal;"><strong>Telefone:</strong> {tel}</div>'
+            '</summary>'
+            '<div class="pub-content" style="margin-top:10px;">'
+            f'<p><strong>RG:</strong> {rg}</p>'
+            f'<p><strong>Endereço:</strong> {endereco_completo}</p>'
+            '<hr style="border:0; border-top:1px solid #e0e0e0; margin:8px 0;">'
+            '<p><strong>Processos Relacionados:</strong></p>'
+            f'{procs_html}'
+            '</div>'
+            '</details>'
+            '</div>'
+        )
+    clientes_html += "</div>"
+    if not clientes:
+        clientes_html = "<p style='padding:15px;'>Nenhum cliente encontrado.</p>"
+
+    # Substituição final do template
+    rendered_html = (
+        HTML_TEMPLATE
+        .replace("{{CNT_VENCIDOS}}", str(counts['vencidos']))
+        .replace("{{CNT_VENCENDO}}", str(counts['vencendo']))
+        .replace("{{CNT_A_VENCER}}", str(counts['a_vencer']))
+        .replace("{{PRAZOS_HTML}}", prazos_html)
+        .replace("{{AGENDA_HTML}}", agenda_html)
+        .replace("{{PROCESSOS_HTML}}", processos_html)
+        .replace("{{CLIENTES_HTML}}", clientes_html)
+    )
+
+    return HTMLResponse(content=rendered_html)
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
