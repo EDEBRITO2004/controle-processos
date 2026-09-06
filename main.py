@@ -109,7 +109,7 @@ async def home():
                     c."Empresa" AS cliente_empresa
                 FROM "Publicações" pub
                 LEFT JOIN "Processos" p ON pub."ProcessoNovoCod1" = p."ProcessoNovoCod1"
-                LEFT JOIN "Clientes" c ON p."CodCli" = c."CodCli"
+                LEFT JOIN "Clientes" c ON pub."CodCli" = c."CodCli"
                 WHERE pub."DataCumprimento" IS NOT NULL
                 ORDER BY pub."DataCumprimento" DESC;
             """)
@@ -123,7 +123,7 @@ async def home():
     except Exception as err:
         print(f"Erro Conexao: {err}")
 
-    # Mapeia processos por Cliente (CodCli)
+    # Mapeia processos por Cliente
     processos_por_cliente = {}
     for proc in processos:
         cod_cli = proc.get('CodCli')
@@ -161,15 +161,15 @@ async def home():
 
         proc_line = f"<p><strong>Processo:</strong> {identificacao_proc}</p>" if identificacao_proc else ""
 
-        agenda_html += f"""
-        <div class="card">
-            <h3>📆 {tipo}</h3>
-            <p><strong>Data:</strong> {data_hora_exibicao}</p>
-            {proc_line}
-            <p><strong>Cliente:</strong> {cliente}</p>
-            <p><strong>Descrição:</strong> {desc}</p>
-        </div>
-        """
+        agenda_html += (
+            '<div class="card">'
+            f'<h3>📆 {tipo}</h3>'
+            f'<p><strong>Data:</strong> {data_hora_exibicao}</p>'
+            f'{proc_line}'
+            f'<p><strong>Cliente:</strong> {cliente}</p>'
+            f'<p><strong>Descrição:</strong> {desc}</p>'
+            '</div>'
+        )
     if not agenda:
         agenda_html = "<p style='padding:15px;'>Nenhum registro pendente na Agenda.</p>"
 
@@ -219,19 +219,19 @@ async def home():
 
         proc_line = f"<p><strong>Processo:</strong> {identificacao_proc}</p>" if identificacao_proc else ""
 
-        prazos_html += f"""
-        <div class="card card-prazo item-prazo status-{categoria_prazo}">
-            <h3>⏳ Data Cumprimento: {data_cump}</h3>
-            <p><strong>Vencimento:</strong> {data_venc}</p>
-            {proc_line}
-            <p><strong>Cliente:</strong> {cliente}</p>
-            <p><strong>Manifestação:</strong> {manifestacao}</p>
-            <details class="pub-details">
-                <summary>▶ Ver publicação</summary>
-                <div class="pub-content">{publicacao}</div>
-            </details>
-        </div>
-        """
+        prazos_html += (
+            f'<div class="card card-prazo item-prazo status-{categoria_prazo}">'
+            f'<h3>⏳ Data Cumprimento: {data_cump}</h3>'
+            f'<p><strong>Vencimento:</strong> {data_venc}</p>'
+            f'{proc_line}'
+            f'<p><strong>Cliente:</strong> {cliente}</p>'
+            f'<p><strong>Manifestação:</strong> {manifestacao}</p>'
+            '<details class="pub-details">'
+            '<summary>▶ Ver publicação</summary>'
+            f'<div class="pub-content">{publicacao}</div>'
+            '</details>'
+            '</div>'
+        )
 
     prazos_html += """
     <div class="empty-msg msg-vencidos" style="display:none; padding:15px; color:#6c757d;">Nenhum prazo com Data Cumprimento anterior a hoje.</div>
@@ -239,7 +239,7 @@ async def home():
     <div class="empty-msg msg-a_vencer" style="display:none; padding:15px; color:#6c757d;">Nenhum prazo com Data Cumprimento posterior a hoje.</div>
     """
 
-    # Renderiza Processos (Com campo de busca)
+    # Renderiza Processos
     processos_html = """
     <div class="search-box">
         <input type="text" id="search-processos" placeholder="🔍 Buscar processo, cliente, ação..." onkeyup="filtrarProcessos()">
@@ -257,21 +257,21 @@ async def home():
         texto_busca = f"{cod_novo} {num_proc} {cliente} {parte_contraria} {acao} {vara}".lower()
         proc_num_line = f"<p><strong>Nº Processo:</strong> {num_proc}</p>" if num_proc else ""
 
-        processos_html += f"""
-        <div class="card card-item-processo" data-search="{texto_busca}">
-            <h3>📁 {cod_novo}</h3>
-            {proc_num_line}
-            <p><strong>Cliente:</strong> {cliente}</p>
-            <p><strong>Parte Contrária:</strong> {parte_contraria}</p>
-            <p><strong>Ação:</strong> {acao}</p>
-            <p><strong>Vara/Juízo:</strong> {vara}</p>
-        </div>
-        """
+        processos_html += (
+            f'<div class="card card-item-processo" data-search="{texto_busca}">'
+            f'<h3>📁 {cod_novo}</h3>'
+            f'{proc_num_line}'
+            f'<p><strong>Cliente:</strong> {cliente}</p>'
+            f'<p><strong>Parte Contrária:</strong> {parte_contraria}</p>'
+            f'<p><strong>Ação:</strong> {acao}</p>'
+            f'<p><strong>Vara/Juízo:</strong> {vara}</p>'
+            '</div>'
+        )
     processos_html += "</div>"
     if not processos:
         processos_html = "<p style='padding:15px;'>Nenhum processo encontrado.</p>"
 
-    # Renderiza Clientes (Com busca + details expansível)
+    # Renderiza Clientes
     clientes_html = """
     <div class="search-box">
         <input type="text" id="search-clientes" placeholder="🔍 Buscar por nome, CPF/CNPJ, cidade..." onkeyup="filtrarClientes()">
@@ -312,24 +312,24 @@ async def home():
 
         texto_busca = f"{nome} {doc} {rg} {tel} {endereco_completo}".lower()
 
-        clientes_html += f"""
-        <div class="card card-item-cliente" data-search="{texto_busca}">
-            <details class="pub-details">
-                <summary style="cursor:pointer; outline:none;">
-                    <div style="font-size:1.05rem; font-weight:bold; color:var(--blue-dark); margin-bottom:4px;">👤 {nome}</div>
-                    <div style="font-size:0.88rem; color:#495057; font-weight:normal;"><strong>Documento:</strong> {doc}</div>
-                    <div style="font-size:0.88rem; color:#495057; font-weight:normal;"><strong>Telefone:</strong> {tel}</div>
-                </summary>
-                <div class="pub-content" style="margin-top:10px;">
-                    <p><strong>RG:</strong> {rg}</p>
-                    <p><strong>Endereço:</strong> {endereco_completo}</p>
-                    <hr style="border:0; border-top:1px solid #e0e0e0; margin:8px 0;">
-                    <p><strong>Processos Relacionados:</strong></p>
-                    {procs_html}
-                </div>
-            </details>
-        </div>
-        """
+        clientes_html += (
+            f'<div class="card card-item-cliente" data-search="{texto_busca}">'
+            '<details class="pub-details">'
+            '<summary style="cursor:pointer; outline:none;">'
+            f'<div style="font-size:1.05rem; font-weight:bold; color:var(--blue-dark); margin-bottom:4px;">👤 {nome}</div>'
+            f'<div style="font-size:0.88rem; color:#495057; font-weight:normal;"><strong>Documento:</strong> {doc}</div>'
+            f'<div style="font-size:0.88rem; color:#495057; font-weight:normal;"><strong>Telefone:</strong> {tel}</div>'
+            '</summary>'
+            '<div class="pub-content" style="margin-top:10px;">'
+            f'<p><strong>RG:</strong> {rg}</p>'
+            f'<p><strong>Endereço:</strong> {endereco_completo}</p>'
+            '<hr style="border:0; border-top:1px solid #e0e0e0; margin:8px 0;">'
+            '<p><strong>Processos Relacionados:</strong></p>'
+            f'{procs_html}'
+            '</div>'
+            '</details>'
+            '</div>'
+        )
     clientes_html += "</div>"
     if not clientes:
         clientes_html = "<p style='padding:15px;'>Nenhum cliente encontrado.</p>"
@@ -338,7 +338,8 @@ async def home():
     cnt_vencendo = counts['vencendo']
     cnt_a_vencer = counts['a_vencer']
 
-    html_content = f"""
+    # Montagem do template final usando strings normais (evita conflitos com f-string)
+    html_content = """
     <!DOCTYPE html>
     <html lang="pt-BR">
     <head>
@@ -346,38 +347,38 @@ async def home():
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Controle de Processos</title>
         <style>
-            :root {{
+            :root {
                 --blue-primary: #0d6efd;
                 --blue-dark: #0a58ca;
                 --red-deadline: #dc3545;
                 --bg-body: #f8f9fa;
-            }}
-            body {{
+            }
+            body {
                 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
                 background-color: var(--bg-body);
                 margin: 0;
                 padding-bottom: 70px;
-            }}
-            header {{
+            }
+            header {
                 background-color: var(--blue-dark);
                 color: white;
                 padding: 16px;
                 text-align: center;
                 font-weight: bold;
                 font-size: 1.2rem;
-            }}
-            .container {{
+            }
+            .container {
                 padding: 12px;
                 max-width: 600px;
                 margin: 0 auto;
-            }}
-            .section {{ display: none; }}
-            .section.active {{ display: block; }}
+            }
+            .section { display: none; }
+            .section.active { display: block; }
             
-            .search-box {{
+            .search-box {
                 margin-bottom: 12px;
-            }}
-            .search-box input {{
+            }
+            .search-box input {
                 width: 100%;
                 padding: 10px 12px;
                 border: 1px solid #ced4da;
@@ -385,18 +386,18 @@ async def home():
                 font-size: 0.9rem;
                 box-sizing: border-box;
                 outline: none;
-            }}
-            .search-box input:focus {{
+            }
+            .search-box input:focus {
                 border-color: var(--blue-primary);
                 box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.25);
-            }}
+            }
 
-            .sub-filter-bar {{
+            .sub-filter-bar {
                 display: flex;
                 gap: 8px;
                 margin-bottom: 12px;
-            }}
-            .btn-sub-filter {{
+            }
+            .btn-sub-filter {
                 flex: 1;
                 padding: 8px 4px;
                 border: 1px solid #ced4da;
@@ -407,43 +408,43 @@ async def home():
                 font-weight: 600;
                 cursor: pointer;
                 text-align: center;
-            }}
-            .btn-sub-filter.active {{
+            }
+            .btn-sub-filter.active {
                 background-color: var(--blue-primary);
                 color: white;
                 border-color: var(--blue-primary);
-            }}
+            }
 
-            .card {{
+            .card {
                 background: white;
                 border-radius: 10px;
                 padding: 14px;
                 margin-bottom: 10px;
                 box-shadow: 0 1px 3px rgba(0,0,0,0.08);
                 border-left: 4px solid var(--blue-primary);
-            }}
-            .card.card-prazo {{
+            }
+            .card.card-prazo {
                 border-left-color: var(--red-deadline);
-            }}
-            .card h3 {{ margin: 0 0 6px 0; color: var(--blue-dark); font-size: 1rem; }}
-            .card.card-prazo h3 {{ color: var(--red-deadline); }}
-            .card p {{ margin: 3px 0; color: #495057; font-size: 0.9rem; }}
+            }
+            .card h3 { margin: 0 0 6px 0; color: var(--blue-dark); font-size: 1rem; }
+            .card.card-prazo h3 { color: var(--red-deadline); }
+            .card p { margin: 3px 0; color: #495057; font-size: 0.9rem; }
 
-            .pub-details {{
+            .pub-details {
                 margin-top: 2px;
-            }}
-            .pub-details summary {{
+            }
+            .pub-details summary {
                 color: var(--blue-dark);
                 font-weight: bold;
                 font-size: 1rem;
                 cursor: pointer;
                 outline: none;
                 list-style: none;
-            }}
-            .pub-details summary::-webkit-details-marker {{
+            }
+            .pub-details summary::-webkit-details-marker {
                 display: none;
-            }}
-            .pub-content {{
+            }
+            .pub-content {
                 margin-top: 10px;
                 padding: 10px;
                 background-color: #f8f9fa;
@@ -451,19 +452,19 @@ async def home():
                 font-size: 0.88rem;
                 color: #333;
                 line-height: 1.4;
-            }}
+            }
 
-            .sub-proc-list {{
+            .sub-proc-list {
                 margin: 4px 0 0 0;
                 padding-left: 18px;
                 font-size: 0.85rem;
                 color: #495057;
-            }}
-            .sub-proc-list li {{
+            }
+            .sub-proc-list li {
                 margin-bottom: 4px;
-            }}
+            }
 
-            .bottom-nav {{
+            .bottom-nav {
                 position: fixed;
                 bottom: 0; left: 0; right: 0;
                 background: white;
@@ -471,16 +472,16 @@ async def home():
                 justify-content: space-around;
                 padding: 12px 0;
                 border-top: 1px solid #dee2e6;
-            }}
-            .nav-item {{
+            }
+            .nav-item {
                 border: none; background: none;
                 color: #6c757d; font-size: 0.85rem;
                 cursor: pointer;
-            }}
-            .nav-item.active {{
+            }
+            .nav-item.active {
                 color: var(--blue-primary);
                 font-weight: bold;
-            }}
+            }
         </style>
     </head>
     <body>
@@ -488,23 +489,20 @@ async def home():
         <div class="container">
             <div id="prazos" class="section active">
                 <div class="sub-filter-bar">
-                    <button class="btn-sub-filter" onclick="filtrarPrazos('vencidos', this)">Vencidos ({cnt_vencidos})</button>
-                    <button class="btn-sub-filter" onclick="filtrarPrazos('vencendo', this)">Vencendo ({cnt_vencendo})</button>
-                    <button class="btn-sub-filter active" onclick="filtrarPrazos('a_vencer', this)">A vencer ({cnt_a_vencer})</button>
+                    <button class="btn-sub-filter" onclick="filtrarPrazos('vencidos', this)">Vencidos (""" + str(cnt_vencidos) + """)</button>
+                    <button class="btn-sub-filter" onclick="filtrarPrazos('vencendo', this)">Vencendo (""" + str(cnt_vencendo) + """)</button>
+                    <button class="btn-sub-filter active" onclick="filtrarPrazos('a_vencer', this)">A vencer (""" + str(cnt_a_vencer) + """)</button>
                 </div>
                 <div id="prazos-list">
-                    {prazos_html}
+                    """ + prazos_html + """
                 </div>
             </div>
-            <div id="agenda" class="section">{agenda_html}</div>
-            <div id="processos" class="section">{processos_html}</div>
-            <div id="clientes" class="section">{clientes_html}</div>
+            <div id="agenda" class="section">""" + agenda_html + """</div>
+            <div id="processos" class="section">""" + processos_html + """</div>
+            <div id="clientes" class="section">""" + clientes_html + """</div>
         </div>
         <nav class="bottom-nav">
             <button class="nav-item active" onclick="showTab('prazos', this)">⏳ Prazos</button>
             <button class="nav-item" onclick="showTab('agenda', this)">📆 Agenda</button>
             <button class="nav-item" onclick="showTab('processos', this)">📁 Processos</button>
-            <button class="nav-item" onclick="showTab('clientes', this)">👤 Clientes</button>
-        </nav>
-        <script>
-        function showTab
+            <button class="nav-item" onclick="showTab('cliente
