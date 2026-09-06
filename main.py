@@ -36,7 +36,13 @@ def formatar_data(raw_data):
     except Exception:
         return str(raw_data)
 
-# Template HTML limpo utilizando marcadores para substituição segura
+# Helper para buscar valor em dicionário testando vários nomes de chaves/colunas
+def get_val(row, *keys):
+    for k in keys:
+        if k in row and row[k] is not None:
+            return row[k]
+    return None
+
 HTML_TEMPLATE = """<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -128,12 +134,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         .card p { margin: 3px 0; color: #495057; font-size: 0.9rem; }
 
         .pub-details {
-            margin-top: 2px;
+            margin-top: 6px;
         }
         .pub-details summary {
             color: var(--blue-dark);
             font-weight: bold;
-            font-size: 1rem;
+            font-size: 0.9rem;
             cursor: pointer;
             outline: none;
             list-style: none;
@@ -142,13 +148,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             display: none;
         }
         .pub-content {
-            margin-top: 10px;
+            margin-top: 8px;
             padding: 10px;
             background-color: #f8f9fa;
             border-radius: 6px;
             font-size: 0.88rem;
             color: #333;
             line-height: 1.4;
+            white-space: pre-wrap;
         }
 
         .sub-proc-list {
@@ -283,7 +290,7 @@ async def home():
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # 1. Clientes (sem limite)
+        # 1. Clientes
         try:
             cursor.execute('SELECT * FROM "Clientes" ORDER BY "Nomecli" ASC;')
             clientes = cursor.fetchall()
@@ -291,7 +298,7 @@ async def home():
             print(f"Erro Clientes: {e}")
             conn.rollback()
 
-        # 2. Processos (sem limite)
+        # 2. Processos
         try:
             cursor.execute("""
                 SELECT 
@@ -313,7 +320,7 @@ async def home():
             print(f"Erro Processos Join: {e}")
             conn.rollback()
 
-        # 3. Agenda (sem limite)
+        # 3. Agenda
         try:
             cursor.execute("""
                 SELECT 
@@ -335,7 +342,7 @@ async def home():
             print(f"Erro Agenda Join: {e}")
             conn.rollback()
 
-        # 4. Publicações / Prazos Pendentes (sem limite)
+        # 4. Publicações / Prazos Pendentes (Sem filtro rígido no WHERE para evitar zerar)
         try:
             cursor.execute("""
                 SELECT 
@@ -345,9 +352,7 @@ async def home():
                     c."Empresa" AS cliente_empresa
                 FROM "Publicações" pub
                 LEFT JOIN "Processos" p ON pub."ProcessoNovoCod1" = p."ProcessoNovoCod1"
-                LEFT JOIN "Clientes" c ON pub."CodCli" = c."CodCli"
-                WHERE pub."DataCumprimento" IS NULL
-                ORDER BY pub."DataVencimento" ASC, pub."Data" ASC;
+                LEFT JOIN "Clientes" c ON pub."CodCli" = c."CodCli";
             """)
             prazos = cursor.fetchall()
         except Exception as e:
@@ -371,13 +376,13 @@ async def home():
     # Renderiza Agenda
     agenda_html = ""
     for item in agenda:
-        tipo = item.get('Tipo') or 'Compromisso'
-        desc = item.get('Tarefa') or item.get('Observações') or 'Sem descrição'
-        cod_novo = item.get('ProcessoNovoCod1') or ''
-        num_proc = item.get('numero_processo') or ''
-        cliente = item.get('cliente_nome') or item.get('cliente_empresa') or item.get('NomeCli') or 'Não informado'
+        tipo = get_val(item, 'Tipo') or 'Compromisso'
+        desc = get_val(item, 'Tarefa', 'Observações', 'Observacoes') or 'Sem descrição'
+        cod_novo = get_val(item, 'ProcessoNovoCod1') or ''
+        num_proc = get_val(item, 'numero_processo', 'Processo') or ''
+        cliente = get_val(item, 'cliente_nome', 'cliente_empresa', 'NomeCli') or 'Não informado'
 
-        raw_hora = item.get('horario_compromisso') or item.get('Horário')
+        raw_hora = get_val(item, 'horario_compromisso', 'Horário', 'Horario')
         hora_fmt = ""
         if raw_hora:
             if hasattr(raw_hora, 'strftime'):
@@ -388,7 +393,7 @@ async def home():
                 except Exception:
                     hora_fmt = str(raw_hora)
 
-        data_fmt = formatar_data(item.get('Data'))
+        data_fmt = formatar_data(get_val(item, 'Data'))
         data_hora_exibicao = f"{data_fmt} - {hora_fmt}" if hora_fmt else data_fmt
 
         identificacao_proc = cod_novo
@@ -414,15 +419,20 @@ async def home():
     counts = {"vencidos": 0, "vencendo": 0, "a_vencer": 0}
 
     for prazo in prazos:
-        cod_novo = prazo.get('ProcessoNovoCod1') or ''
-        num_proc = prazo.get('numero_processo') or ''
-        cliente = prazo.get('cliente_nome') or prazo.get('cliente_empresa') or 'Não informado'
+        # Verifica se já está cumprido no Python para flexibilizar nomes de colunas
+        cumprido = get_val(prazo, 'DataCumprimento', 'Data_Cumprimento', 'Cumprido')
+        if cumprido in [True, 1, '1', 'true', 'TRUE', 't', 'T', 'yes', 'YES']:
+            continue
 
-        dt_venc_raw = prazo.get('DataVencimento') or prazo.get('Data')
+        cod_novo = get_val(prazo, 'ProcessoNovoCod1') or ''
+        num_proc = get_val(prazo, 'numero_processo', 'Processo') or ''
+        cliente = get_val(prazo, 'cliente_nome', 'cliente_empresa') or 'Não informado'
+
+        dt_venc_raw = get_val(prazo, 'DataVencimento', 'Data_Vencimento', 'DataVenc', 'Data')
         data_venc = formatar_data(dt_venc_raw)
-        data_cump = formatar_data(prazo.get('DataCumprimento'))
-        manifestacao = prazo.get('Manifestação') or prazo.get('Manifestacao') or 'Não informada'
-        publicacao = prazo.get('Publicação') or prazo.get('Publicacao') or prazo.get('Texto') or 'Sem publicação'
+        
+        manifestacao = get_val(prazo, 'Manifestação', 'Manifestacao', 'Tarefa', 'Assunto') or 'Não informada'
+        publicacao = get_val(prazo, 'Publicação', 'Publicacao', 'Texto', 'Observações', 'Observacoes') or 'Sem texto de publicação'
 
         dt_ref_obj = None
         if dt_venc_raw:
@@ -482,12 +492,12 @@ async def home():
     <div id="lista-processos">
     """
     for proc in processos:
-        cod_novo = proc.get('ProcessoNovoCod1') or 'Sem Cód. Novo'
-        num_proc = proc.get('Processo') or ''
-        cliente = proc.get('cliente_nome') or proc.get('cliente_empresa') or 'Não informado'
-        parte_contraria = proc.get('parte_contraria') or 'Não informada'
-        acao = proc.get('acao_nome') or 'Não informada'
-        vara = proc.get('Vara') or 'Não informada'
+        cod_novo = get_val(proc, 'ProcessoNovoCod1') or 'Sem Cód. Novo'
+        num_proc = get_val(proc, 'Processo') or ''
+        cliente = get_val(proc, 'cliente_nome', 'cliente_empresa') or 'Não informado'
+        parte_contraria = get_val(proc, 'parte_contraria', 'Parte Contrária') or 'Não informada'
+        acao = get_val(proc, 'acao_nome') or 'Não informada'
+        vara = get_val(proc, 'Vara') or 'Não informada'
 
         texto_busca = f"{cod_novo} {num_proc} {cliente} {parte_contraria} {acao} {vara}".lower()
         proc_num_line = f"<p><strong>Nº Processo:</strong> {num_proc}</p>" if num_proc else ""
@@ -514,76 +524,19 @@ async def home():
     <div id="lista-clientes">
     """
     for cli in clientes:
-        cod_cli = cli.get('CodCli')
-        nome = cli.get('Nomecli') or cli.get('Empresa') or 'Sem Nome'
-        doc = cli.get('CPF_CNPJ') or cli.get('Cpf_Cnpj') or cli.get('CPF') or 'N/A'
-        rg = cli.get('RG') or cli.get('Rg') or 'N/A'
-        tel = cli.get('NúmeroTelefone') or cli.get('Telefone') or cli.get('Celular') or 'N/A'
+        cod_cli = get_val(cli, 'CodCli')
+        nome = get_val(cli, 'Nomecli', 'Empresa') or 'Sem Nome'
+        doc = get_val(cli, 'CPF_CNPJ', 'Cpf_Cnpj', 'CPF') or 'N/A'
+        rg = get_val(cli, 'RG', 'Rg') or 'N/A'
+        tel = get_val(cli, 'NúmeroTelefone', 'Telefone', 'Celular') or 'N/A'
 
-        rua = cli.get('Endereço') or cli.get('Endereco') or ''
-        num = cli.get('Número') or cli.get('Numero') or ''
-        bairro = cli.get('Bairro') or ''
-        cidade = cli.get('Cidade') or ''
-        uf = cli.get('Estado') or cli.get('UF') or ''
+        rua = get_val(cli, 'Endereço', 'Endereco') or ''
+        num = get_val(cli, 'Número', 'Numero') or ''
+        bairro = get_val(cli, 'Bairro') or ''
+        cidade = get_val(cli, 'Cidade') or ''
+        uf = get_val(cli, 'Estado', 'UF') or ''
 
         partes_end = [p for p in [rua, num, bairro, cidade, uf] if p]
         endereco_completo = ", ".join(partes_end) if partes_end else "Não informado"
 
-        procs_cli = processos_por_cliente.get(cod_cli, [])
-        procs_html = ""
-        if procs_cli:
-            for p_item in procs_cli:
-                c_num = p_item.get('ProcessoNovoCod1') or 'Sem Cód.'
-                num_p = p_item.get('Processo') or ''
-                a_nome = p_item.get('acao_nome') or 'Ação N/I'
-
-                ident = c_num
-                if num_p and num_p != c_num:
-                    ident += f" ({num_p})"
-                procs_html += f"<li><strong>{ident}</strong> - {a_nome}</li>"
-            procs_html = f"<ul class='sub-proc-list'>{procs_html}</ul>"
-        else:
-            procs_html = "<p style='font-size:0.85rem; color:#6c757d; margin-top:4px;'>Nenhum processo vinculado.</p>"
-
-        texto_busca = f"{nome} {doc} {rg} {tel} {endereco_completo}".lower()
-
-        clientes_html += (
-            f'<div class="card card-item-cliente" data-search="{texto_busca}">'
-            '<details class="pub-details">'
-            '<summary style="cursor:pointer; outline:none;">'
-            f'<div style="font-size:1.05rem; font-weight:bold; color:var(--blue-dark); margin-bottom:4px;">👤 {nome}</div>'
-            f'<div style="font-size:0.88rem; color:#495057; font-weight:normal;"><strong>Documento:</strong> {doc}</div>'
-            f'<div style="font-size:0.88rem; color:#495057; font-weight:normal;"><strong>Telefone:</strong> {tel}</div>'
-            '</summary>'
-            '<div class="pub-content" style="margin-top:10px;">'
-            f'<p><strong>RG:</strong> {rg}</p>'
-            f'<p><strong>Endereço:</strong> {endereco_completo}</p>'
-            '<hr style="border:0; border-top:1px solid #e0e0e0; margin:8px 0;">'
-            '<p><strong>Processos Relacionados:</strong></p>'
-            f'{procs_html}'
-            '</div>'
-            '</details>'
-            '</div>'
-        )
-    clientes_html += "</div>"
-    if not clientes:
-        clientes_html = "<p style='padding:15px;'>Nenhum cliente encontrado.</p>"
-
-    # Substituição final do template
-    rendered_html = (
-        HTML_TEMPLATE
-        .replace("{{CNT_VENCIDOS}}", str(counts['vencidos']))
-        .replace("{{CNT_VENCENDO}}", str(counts['vencendo']))
-        .replace("{{CNT_A_VENCER}}", str(counts['a_vencer']))
-        .replace("{{PRAZOS_HTML}}", prazos_html)
-        .replace("{{AGENDA_HTML}}", agenda_html)
-        .replace("{{PROCESSOS_HTML}}", processos_html)
-        .replace("{{CLIENTES_HTML}}", clientes_html)
-    )
-
-    return HTMLResponse(content=rendered_html)
-
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
+        procs_cli = processos_por_cliente.get(cod_cli, [
