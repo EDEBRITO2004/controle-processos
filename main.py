@@ -47,7 +47,7 @@ async def home():
 
         # 1. Clientes
         try:
-            cursor.execute('SELECT * FROM "Clientes" ORDER BY "Nomecli" ASC LIMIT 30;')
+            cursor.execute('SELECT * FROM "Clientes" ORDER BY "Nomecli" ASC LIMIT 100;')
             clientes = cursor.fetchall()
         except Exception as e:
             print(f"Erro Clientes: {e}")
@@ -59,6 +59,7 @@ async def home():
                 SELECT 
                     p."ProcessoNovoCod1",
                     p."Processo",
+                    p."CodCli",
                     p."Parte Contrária" AS parte_contraria,
                     p."Vara",
                     c."Nomecli" AS cliente_nome,
@@ -68,7 +69,7 @@ async def home():
                 LEFT JOIN "Clientes" c ON p."CodCli" = c."CodCli"
                 LEFT JOIN "Ações" a ON p."Ação" = a."Código"
                 ORDER BY p."Código" DESC
-                LIMIT 30;
+                LIMIT 100;
             """)
             processos = cursor.fetchall()
         except Exception as e:
@@ -98,7 +99,7 @@ async def home():
             print(f"Erro Agenda Join: {e}")
             conn.rollback()
 
-        # 4. Publicações / Prazos (Traz registros com DataCumprimento)
+        # 4. Publicações / Prazos
         try:
             cursor.execute("""
                 SELECT 
@@ -121,6 +122,15 @@ async def home():
         conn.close()
     except Exception as err:
         print(f"Erro Conexao: {err}")
+
+    # Mapeia processos por Cliente (CodCli)
+    processos_por_cliente = {}
+    for proc in processos:
+        cod_cli = proc.get('CodCli')
+        if cod_cli:
+            if cod_cli not in processos_por_cliente:
+                processos_por_cliente[cod_cli] = []
+            processos_por_cliente[cod_cli].append(proc)
 
     # Renderiza Agenda
     agenda_html = ""
@@ -161,7 +171,7 @@ async def home():
     if not agenda:
         agenda_html = "<p style='padding:15px;'>Nenhum registro pendente na Agenda.</p>"
 
-    # Renderiza Prazos com a nova classificação por DataCumprimento
+    # Renderiza Prazos
     prazos_html = ""
     counts = {"vencidos": 0, "vencendo": 0, "a_vencer": 0}
 
@@ -176,7 +186,6 @@ async def home():
         manifestacao = prazo.get('Manifestação') or prazo.get('Manifestacao') or 'Não informada'
         publicacao = prazo.get('Publicação') or prazo.get('Publicacao') or prazo.get('Texto') or 'Sem publicação'
 
-        # Trata e corrige o ano de dt_cump_raw
         dt_cump_obj = None
         if dt_cump_raw:
             if hasattr(dt_cump_raw, 'date'):
@@ -191,7 +200,6 @@ async def home():
                 except Exception:
                     pass
 
-        # Classificação baseada em DataCumprimento vs Hoje
         categoria_prazo = "a_vencer"
         if dt_cump_obj:
             if dt_cump_obj < hoje:
@@ -209,11 +217,11 @@ async def home():
 
         prazos_html += f"""
         <div class="card card-prazo item-prazo status-{categoria_prazo}">
-            <h3>⏳ Data de Cumprimento: {data_cump}</h3>
-            <p><strong>Publicação:</strong> {data_venc}</p>
+            <h3>⏳ Data Cumprimento: {data_cump}</h3>
+            <p><strong>Vencimento:</strong> {data_venc}</p>
             {f'<p><strong>Processo:</strong> {identificacao_proc}</p>' if identificacao_proc else ''}
             <p><strong>Cliente:</strong> {cliente}</p>
-            <p><strong>Providência:</strong> {manifestacao}</p>
+            <p><strong>Manifestação:</strong> {manifestacao}</p>
             <details class="pub-details">
                 <summary>▶ Ver publicação</summary>
                 <div class="pub-content">{publicacao}</div>
@@ -227,8 +235,13 @@ async def home():
     <div class="empty-msg msg-a_vencer" style="display:none; padding:15px; color:#6c757d;">Nenhum prazo com Data Cumprimento posterior a hoje.</div>
     """
 
-    # Renderiza Processos
-    processos_html = ""
+    # Renderiza Processos (Com campo de busca)
+    processos_html = """
+    <div class="search-box">
+        <input type="text" id="search-processos" placeholder="🔍 Buscar processo, cliente, ação..." onkeyup="filtrarProcessos()">
+    </div>
+    <div id="lista-processos">
+    """
     for proc in processos:
         cod_novo = proc.get('ProcessoNovoCod1') or 'Sem Cód. Novo'
         num_proc = proc.get('Processo') or ''
@@ -237,8 +250,10 @@ async def home():
         acao = proc.get('acao_nome') or 'Não informada'
         vara = proc.get('Vara') or 'Não informada'
         
+        texto_busca = f"{cod_novo} {num_proc} {cliente} {parte_contraria} {acao} {vara}".lower()
+
         processos_html += f"""
-        <div class="card">
+        <div class="card card-item-processo" data-search="{texto_busca}">
             <h3>📁 {cod_novo}</h3>
             {f'<p><strong>Nº Processo:</strong> {num_proc}</p>' if num_proc else ''}
             <p><strong>Cliente:</strong> {cliente}</p>
@@ -247,23 +262,68 @@ async def home():
             <p><strong>Vara/Juízo:</strong> {vara}</p>
         </div>
         """
+    processos_html += "</div>"
     if not processos:
         processos_html = "<p style='padding:15px;'>Nenhum processo encontrado.</p>"
 
-    # Renderiza Clientes
-    clientes_html = ""
+    # Renderiza Clientes (Com busca + details expansível)
+    clientes_html = """
+    <div class="search-box">
+        <input type="text" id="search-clientes" placeholder="🔍 Buscar por nome, CPF/CNPJ, cidade..." onkeyup="filtrarClientes()">
+    </div>
+    <div id="lista-clientes">
+    """
     for cli in clientes:
+        cod_cli = cli.get('CodCli')
         nome = cli.get('Nomecli') or cli.get('Empresa') or 'Sem Nome'
-        doc = cli.get('CPF_CNPJ') or 'N/A'
-        tel = cli.get('NúmeroTelefone') or 'N/A'
+        doc = cli.get('CPF_CNPJ') or cli.get('Cpf_Cnpj') or cli.get('CPF') or 'N/A'
+        rg = cli.get('RG') or cli.get('Rg') or 'N/A'
+        tel = cli.get('NúmeroTelefone') or cli.get('Telefone') or cli.get('Celular') or 'N/A'
         
+        rua = cli.get('Endereço') or cli.get('Endereco') or ''
+        num = cli.get('Número') or cli.get('Numero') or ''
+        bairro = cli.get('Bairro') or ''
+        cidade = cli.get('Cidade') or ''
+        uf = cli.get('Estado') or cli.get('UF') or ''
+        
+        partes_end = [p for p in [rua, num, bairro, cidade, uf] if p]
+        endereco_completo = ", ".join(partes_end) if partes_end else "Não informado"
+
+        procs_cli = processos_por_cliente.get(cod_cli, [])
+        procs_html = ""
+        if procs_cli:
+            for p_item in procs_cli:
+                c_num = p_item.get('ProcessoNovoCod1') or 'Sem Cód.'
+                num_p = p_item.get('Processo') or ''
+                a_nome = p_item.get('acao_nome') or 'Ação N/I'
+                
+                ident = c_num
+                if num_p and num_p != c_num:
+                    ident += f" ({num_p})"
+                procs_html += f"<li><strong>{ident}</strong> - {a_nome}</li>"
+            procs_html = f"<ul class='sub-proc-list'>{procs_html}</ul>"
+        else:
+            procs_html = "<p style='font-size:0.85rem; color:#6c757d; margin-top:4px;'>Nenhum processo vinculado.</p>"
+
+        texto_busca = f"{nome} {doc} {rg} {tel} {endereco_completo}".lower()
+
         clientes_html += f"""
-        <div class="card">
-            <h3>👤 {nome}</h3>
-            <p><strong>Documento:</strong> {doc}</p>
-            <p><strong>Telefone:</strong> {tel}</p>
+        <div class="card card-item-cliente" data-search="{texto_busca}">
+            <details class="pub-details">
+                <summary>👤 {nome}</summary>
+                <div class="pub-content">
+                    <p><strong>CPF/CNPJ:</strong> {doc}</p>
+                    <p><strong>RG:</strong> {rg}</p>
+                    <p><strong>Telefone:</strong> {tel}</p>
+                    <p><strong>Endereço:</strong> {endereco_completo}</p>
+                    <hr style="border:0; border-top:1px solid #e0e0e0; margin:8px 0;">
+                    <p><strong>Processos Relacionados:</strong></p>
+                    {procs_html}
+                </div>
+            </details>
         </div>
         """
+    clientes_html += "</div>"
     if not clientes:
         clientes_html = "<p style='padding:15px;'>Nenhum cliente encontrado.</p>"
 
@@ -303,6 +363,23 @@ async def home():
             .section {{ display: none; }}
             .section.active {{ display: block; }}
             
+            .search-box {{
+                margin-bottom: 12px;
+            }}
+            .search-box input {{
+                width: 100%;
+                padding: 10px 12px;
+                border: 1px solid #ced4da;
+                border-radius: 8px;
+                font-size: 0.9rem;
+                box-sizing: border-box;
+                outline: none;
+            }}
+            .search-box input:focus {{
+                border-color: var(--blue-primary);
+                box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.25);
+            }}
+
             .sub-filter-bar {{
                 display: flex;
                 gap: 8px;
@@ -342,26 +419,37 @@ async def home():
             .card p {{ margin: 3px 0; color: #495057; font-size: 0.9rem; }}
 
             .pub-details {{
-                margin-top: 10px;
-                border-top: 1px solid #f0f0f0;
-                padding-top: 6px;
+                margin-top: 2px;
             }}
             .pub-details summary {{
-                color: var(--blue-primary);
+                color: var(--blue-dark);
                 font-weight: bold;
-                font-size: 0.88rem;
+                font-size: 1rem;
                 cursor: pointer;
                 outline: none;
+                list-style: none;
+            }}
+            .pub-details summary::-webkit-details-marker {{
+                display: none;
             }}
             .pub-content {{
-                margin-top: 8px;
+                margin-top: 10px;
                 padding: 10px;
                 background-color: #f8f9fa;
                 border-radius: 6px;
-                font-size: 0.85rem;
+                font-size: 0.88rem;
                 color: #333;
-                white-space: pre-wrap;
                 line-height: 1.4;
+            }}
+
+            .sub-proc-list {{
+                margin: 4px 0 0 0;
+                padding-left: 18px;
+                font-size: 0.85rem;
+                color: #495057;
+            }}
+            .sub-proc-list li {{
+                margin-bottom: 4px;
             }}
 
             .bottom-nav {{
@@ -417,33 +505,4 @@ async def home():
 
             function filtrarPrazos(status, btnElement) {{
                 document.querySelectorAll('.btn-sub-filter').forEach(b => b.classList.remove('active'));
-                if(btnElement) btnElement.classList.add('active');
-
-                let totalVisivel = 0;
-                document.querySelectorAll('.item-prazo').forEach(item => {{
-                    if (item.classList.contains('status-' + status)) {{
-                        item.style.display = 'block';
-                        totalVisivel++;
-                    }} else {{
-                        item.style.display = 'none';
-                    }}
-                }});
-
-                document.querySelectorAll('.empty-msg').forEach(msg => msg.style.display = 'none');
-                if (totalVisivel === 0) {{
-                    const msgEl = document.querySelector('.msg-' + status);
-                    if (msgEl) msgEl.style.display = 'block';
-                }}
-            }}
-
-            document.addEventListener("DOMContentLoaded", function() {{
-                const btnAtivo = document.querySelector('.btn-sub-filter.active');
-                if (btnAtivo) {{
-                    filtrarPrazos('a_vencer', btnAtivo);
-                }}
-            }});
-        </script>
-    </body>
-    </html>
-    """
-    return HTMLResponse(content=html_content)
+            
