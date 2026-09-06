@@ -109,7 +109,9 @@ async def home():
                 FROM "Publicações" pub
                 LEFT JOIN "Processos" p ON pub."ProcessoNovoCod1" = p."ProcessoNovoCod1"
                 LEFT JOIN "Clientes" c ON pub."CodCli" = c."CodCli"
-                WHERE pub."DataCumprimento" IS NOT NULL
+                WHERE a."Cumprido" IS NULL 
+                OR a."Cumprido" = FALSE 
+                OR CAST(a."Cumprido" AS TEXT) IN ('0','false','FALSE','f','F','no','NO')
                 ORDER BY pub."DataCumprimento" DESC;
             """)
             prazos = cursor.fetchall()
