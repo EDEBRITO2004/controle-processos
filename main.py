@@ -354,7 +354,7 @@ async def home():
                     c."Empresa" AS cliente_empresa
                 FROM "Publicações" pub
                 LEFT JOIN "Processos" p ON pub."ProcessoNovoCod1" = p."ProcessoNovoCod1"
-                LEFT JOIN "Clientes" c ON pub."CodCli" = c."CodCli";
+                LEFT JOIN "Clientes" c ON p."CodCli" = c."CodCli";
             """)
             prazos = cursor.fetchall()
         except Exception as e:
