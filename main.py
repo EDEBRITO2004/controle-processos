@@ -348,17 +348,15 @@ async def home():
         try:
             cursor.execute("""
                 SELECT 
-                SELECT 
-    pub.*,
-    p."ProcessoNovoCod1" AS proc_cod_vinculado,
-    p."Processo" AS numero_processo,
-    c."Nomecli" AS cliente_nome,
-    c."Empresa" AS cliente_empresa
-FROM "Publicações" pub
-LEFT JOIN "Processos" p 
-    ON TRIM(UPPER(pub."ProcessoNovoCod1")) = TRIM(UPPER(p."ProcessoNovoCod1"))
-    OR (pub."ProcessoNovoCod1" IS NULL AND TRIM(UPPER(pub."Processo")) = TRIM(UPPER(p."Processo")))
-LEFT JOIN "Clientes" c ON p."CodCli" = c."CodCli";
+                    pub.*,
+                    p."ProcessoNovoCod1" AS proc_cod_vinculado,
+                    p."Processo" AS numero_processo,
+                    c."Nomecli" AS cliente_nome,
+                    c."Empresa" AS cliente_empresa
+                FROM "Publicações" pub
+                LEFT JOIN "Processos" p 
+                    ON TRIM(UPPER(pub."ProcessoNovoCod1")) = TRIM(UPPER(p."ProcessoNovoCod1"))
+                LEFT JOIN "Clientes" c ON p."CodCli" = c."CodCli";
             """)
             prazos = cursor.fetchall()
         except Exception as e:
@@ -434,7 +432,7 @@ LEFT JOIN "Clientes" c ON p."CodCli" = c."CodCli";
         if cumprido_flag in [True, 1, '1', 'true', 'TRUE', 't', 'T', 'yes', 'YES']:
             continue
 
-        cod_novo = get_val(prazo, 'ProcessoNovoCod1') or ''
+        cod_novo = get_val(prazo, 'ProcessoNovoCod1', 'proc_cod_vinculado') or ''
         num_proc = get_val(prazo, 'numero_processo', 'Processo') or ''
         cliente = get_val(prazo, 'cliente_nome', 'cliente_empresa') or 'Não informado'
 
