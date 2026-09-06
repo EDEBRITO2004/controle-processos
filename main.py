@@ -179,61 +179,63 @@ async def home():
     counts = {"vencidos": 0, "vencendo": 0, "a_vencer": 0}
 
     for prazo in prazos:
-        cod_novo = prazo.get('ProcessoNovoCod1') or ''
-        num_proc = prazo.get('numero_processo') or ''
-        cliente = prazo.get('cliente_nome') or prazo.get('cliente_empresa') or 'Não informado'
+    cod_novo = prazo.get('ProcessoNovoCod1') or ''
+    num_proc = prazo.get('numero_processo') or ''
+    cliente = prazo.get('cliente_nome') or prazo.get('cliente_empresa') or 'Não informado'
 
-        dt_cump_raw = prazo.get('DataCumprimento')
-        data_cump = formatar_data(dt_cump_raw)
-        data_venc = formatar_data(prazo.get('DataVencimento') or prazo.get('Data'))
-        manifestacao = prazo.get('Manifestação') or prazo.get('Manifestacao') or 'Não informada'
-        publicacao = prazo.get('Publicação') or prazo.get('Publicacao') or prazo.get('Texto') or 'Sem publicação'
+    data_cump = formatar_data(prazo.get('DataCumprimento'))
+    
+    # Pega o campo de vencimento bruto
+    dt_venc_raw = prazo.get('DataVencimento') or prazo.get('Data')
+    data_venc = formatar_data(dt_venc_raw)
+    
+    manifestacao = prazo.get('Manifestação') or prazo.get('Manifestacao') or 'Não informada'
+    publicacao = prazo.get('Publicação') or prazo.get('Publicacao') or prazo.get('Texto') or 'Sem publicação'
 
-        dt_cump_obj = None
-        if dt_cump_raw:
-            if hasattr(dt_cump_raw, 'date'):
-                dt_cump_obj = dt_cump_raw.date()
-            elif isinstance(dt_cump_raw, date):
-                dt_cump_obj = dt_cump_raw
+    # Converte para date object para comparação
+    dt_ref_obj = None
+    if dt_venc_raw:
+        if hasattr(dt_venc_raw, 'date'):
+            dt_ref_obj = dt_venc_raw.date()
+        elif isinstance(dt_venc_raw, date):
+            dt_ref_obj = dt_venc_raw
 
-            if dt_cump_obj and dt_cump_obj.year < 2000:
-                try:
-                    ano_corrigido = int(str(dt_cump_obj.year).zfill(4)[-2:]) + 2000
-                    dt_cump_obj = dt_cump_obj.replace(year=ano_corrigido)
-                except Exception:
-                    pass
+        if dt_ref_obj and dt_ref_obj.year < 2000:
+            try:
+                ano_corrigido = int(str(dt_ref_obj.year).zfill(4)[-2:]) + 2000
+                dt_ref_obj = dt_ref_obj.replace(year=ano_corrigido)
+            except Exception:
+                pass
 
-        categoria_prazo = "a_vencer"
-        if dt_cump_obj:
-            if dt_cump_obj < hoje:
-                categoria_prazo = "vencidos"
-            elif dt_cump_obj == hoje:
-                categoria_prazo = "vencendo"
-            else:
-                categoria_prazo = "a_vencer"
+    categoria_prazo = "a_vencer"
+    if dt_ref_obj:
+        if dt_ref_obj < hoje:
+            categoria_prazo = "vencidos"
+        elif dt_ref_obj == hoje:
+            categoria_prazo = "vencendo"
+        else:
+            categoria_prazo = "a_vencer"
 
-        counts[categoria_prazo] += 1
+    counts[categoria_prazo] += 1
 
-        identificacao_proc = cod_novo
-        if num_proc and num_proc != cod_novo:
-            identificacao_proc += f" ({num_proc})" if cod_novo else num_proc
+    identificacao_proc = cod_novo
+    if num_proc and num_proc != cod_novo:
+        identificacao_proc += f" ({num_proc})" if cod_novo else num_proc
 
-        proc_line = f"<p><strong>Processo:</strong> {identificacao_proc}</p>" if identificacao_proc else ""
+    proc_line = f"<p><strong>Processo:</strong> {identificacao_proc}</p>" if identificacao_proc else ""
 
-        prazos_html += (
-            f'<div class="card card-prazo item-prazo status-{categoria_prazo}">'
-            f'<h3>⏳ Data Cumprimento: {data_cump}</h3>'
-            f'<p><strong>Vencimento:</strong> {data_venc}</p>'
-            f'{proc_line}'
-            f'<p><strong>Cliente:</strong> {cliente}</p>'
-            f'<p><strong>Manifestação:</strong> {manifestacao}</p>'
-            '<details class="pub-details">'
-            '<summary>▶ Ver publicação</summary>'
-            f'<div class="pub-content">{publicacao}</div>'
-            '</details>'
-            '</div>'
-        )
-
+    prazos_html += (
+        f'<div class="card card-prazo item-prazo status-{categoria_prazo}">'
+        f'<h3>⏳ Vencimento: {data_venc}</h3>'
+        f'{proc_line}'
+        f'<p><strong>Cliente:</strong> {cliente}</p>'
+        f'<p><strong>Manifestação:</strong> {manifestacao}</p>'
+        '<details class="pub-details">'
+        '<summary>▶ Ver publicação</summary>'
+        f'<div class="pub-content">{publicacao}</div>'
+        '</details>'
+        '</div>'
+    )
     prazos_html += """
     <div class="empty-msg msg-vencidos" style="display:none; padding:15px; color:#6c757d;">Nenhum prazo com Data Cumprimento anterior a hoje.</div>
     <div class="empty-msg msg-vencendo" style="display:none; padding:15px; color:#6c757d;">Nenhum prazo com Data Cumprimento para hoje.</div>
