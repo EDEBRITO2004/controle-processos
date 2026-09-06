@@ -1,4 +1,4 @@
-Aqui está o código completo do main.py com a consulta SQL atualizada (fazendo o LEFT JOIN com a tabela Sistemas), tratamento do campo Sistema e a renderização do botão com o ícone 🔗 direcionando para o link correspondente:
+# -*- coding: utf-8 -*-
 import os
 from datetime import date
 from fastapi import FastAPI
@@ -37,7 +37,7 @@ def formatar_data(raw_data):
     except Exception:
         return str(raw_data)
 
-# Helper para buscar valor em dicionário testando vários nomes de chaves/colunas
+# Helper para buscar valor em dicionario testando varios nomes de chaves/colunas
 def get_val(row, *keys):
     for k in keys:
         if k in row and row[k] is not None:
@@ -519,13 +519,13 @@ async def home():
                 url = 'https://' + url
             btn_link_html = f'''
             <a href="{url}" target="_blank" style="display:inline-block; margin-top:8px; padding:6px 12px; background-color:#0d6efd; color:white; text-decoration:none; border-radius:6px; font-size:0.85rem; font-weight:bold;">
-                 Acessar {sistema_nome or "Sistema"}
+                &#128279; Acessar {sistema_nome or "Sistema"}
             </a>
             '''
         else:
             btn_link_html = '''
             <button onclick="alert('Nenhum link cadastrado para este sistema.')" style="margin-top:8px; padding:6px 12px; background-color:#6c757d; color:white; border:none; border-radius:6px; font-size:0.85rem; cursor:pointer;">
-                 Sem link cadastrado
+                &#128279; Sem link cadastrado
             </button>
             '''
 
@@ -628,4 +628,3 @@ async def home():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
-
