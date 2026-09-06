@@ -40,7 +40,7 @@ def formatar_data(raw_data):
 async def home():
     clientes, processos, agenda, prazos = [], [], [], []
     hoje = date.today()
-    
+
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -140,7 +140,7 @@ async def home():
         cod_novo = item.get('ProcessoNovoCod1') or ''
         num_proc = item.get('numero_processo') or ''
         cliente = item.get('cliente_nome') or item.get('cliente_empresa') or item.get('NomeCli') or 'Não informado'
-        
+
         raw_hora = item.get('horario_compromisso') or item.get('Horário')
         hora_fmt = ""
         if raw_hora:
@@ -181,7 +181,7 @@ async def home():
         cod_novo = prazo.get('ProcessoNovoCod1') or ''
         num_proc = prazo.get('numero_processo') or ''
         cliente = prazo.get('cliente_nome') or prazo.get('cliente_empresa') or 'Não informado'
-        
+
         dt_cump_raw = prazo.get('DataCumprimento')
         data_cump = formatar_data(dt_cump_raw)
         data_venc = formatar_data(prazo.get('DataVencimento') or prazo.get('Data'))
@@ -194,7 +194,7 @@ async def home():
                 dt_cump_obj = dt_cump_raw.date()
             elif isinstance(dt_cump_raw, date):
                 dt_cump_obj = dt_cump_raw
-            
+
             if dt_cump_obj and dt_cump_obj.year < 2000:
                 try:
                     ano_corrigido = int(str(dt_cump_obj.year).zfill(4)[-2:]) + 2000
@@ -253,7 +253,7 @@ async def home():
         parte_contraria = proc.get('parte_contraria') or 'Não informada'
         acao = proc.get('acao_nome') or 'Não informada'
         vara = proc.get('Vara') or 'Não informada'
-        
+
         texto_busca = f"{cod_novo} {num_proc} {cliente} {parte_contraria} {acao} {vara}".lower()
         proc_num_line = f"<p><strong>Nº Processo:</strong> {num_proc}</p>" if num_proc else ""
 
@@ -284,13 +284,13 @@ async def home():
         doc = cli.get('CPF_CNPJ') or cli.get('Cpf_Cnpj') or cli.get('CPF') or 'N/A'
         rg = cli.get('RG') or cli.get('Rg') or 'N/A'
         tel = cli.get('NúmeroTelefone') or cli.get('Telefone') or cli.get('Celular') or 'N/A'
-        
+
         rua = cli.get('Endereço') or cli.get('Endereco') or ''
         num = cli.get('Número') or cli.get('Numero') or ''
         bairro = cli.get('Bairro') or ''
         cidade = cli.get('Cidade') or ''
         uf = cli.get('Estado') or cli.get('UF') or ''
-        
+
         partes_end = [p for p in [rua, num, bairro, cidade, uf] if p]
         endereco_completo = ", ".join(partes_end) if partes_end else "Não informado"
 
@@ -301,7 +301,7 @@ async def home():
                 c_num = p_item.get('ProcessoNovoCod1') or 'Sem Cód.'
                 num_p = p_item.get('Processo') or ''
                 a_nome = p_item.get('acao_nome') or 'Ação N/I'
-                
+
                 ident = c_num
                 if num_p and num_p != c_num:
                     ident += f" ({num_p})"
@@ -374,7 +374,7 @@ async def home():
             }
             .section { display: none; }
             .section.active { display: block; }
-            
+
             .search-box {
                 margin-bottom: 12px;
             }
@@ -505,4 +505,82 @@ async def home():
             <button class="nav-item active" onclick="showTab('prazos', this)">⏳ Prazos</button>
             <button class="nav-item" onclick="showTab('agenda', this)">📆 Agenda</button>
             <button class="nav-item" onclick="showTab('processos', this)">📁 Processos</button>
-            <button class="nav-item" onclick="showTab('cliente
+            <button class="nav-item" onclick="showTab('clientes', this)">👥 Clientes</button>
+        </nav>
+
+        <script>
+            function showTab(tabId, btnEl) {
+                document.querySelectorAll('.section').forEach(function (sec) {
+                    sec.classList.remove('active');
+                });
+                document.getElementById(tabId).classList.add('active');
+
+                document.querySelectorAll('.nav-item').forEach(function (btn) {
+                    btn.classList.remove('active');
+                });
+                if (btnEl) {
+                    btnEl.classList.add('active');
+                }
+            }
+
+            function filtrarPrazos(categoria, btnEl) {
+                document.querySelectorAll('#prazos .btn-sub-filter').forEach(function (btn) {
+                    btn.classList.remove('active');
+                });
+                if (btnEl) {
+                    btnEl.classList.add('active');
+                }
+
+                var itens = document.querySelectorAll('#prazos-list .item-prazo');
+                var visiveis = 0;
+                itens.forEach(function (item) {
+                    if (item.classList.contains('status-' + categoria)) {
+                        item.style.display = '';
+                        visiveis++;
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+
+                document.querySelectorAll('#prazos-list .empty-msg').forEach(function (msg) {
+                    msg.style.display = 'none';
+                });
+                if (visiveis === 0) {
+                    var msg = document.querySelector('#prazos-list .msg-' + categoria);
+                    if (msg) {
+                        msg.style.display = 'block';
+                    }
+                }
+            }
+
+            function filtrarProcessos() {
+                var termo = document.getElementById('search-processos').value.toLowerCase();
+                document.querySelectorAll('#lista-processos .card-item-processo').forEach(function (card) {
+                    var texto = card.getAttribute('data-search') || '';
+                    card.style.display = texto.includes(termo) ? '' : 'none';
+                });
+            }
+
+            function filtrarClientes() {
+                var termo = document.getElementById('search-clientes').value.toLowerCase();
+                document.querySelectorAll('#lista-clientes .card-item-cliente').forEach(function (card) {
+                    var texto = card.getAttribute('data-search') || '';
+                    card.style.display = texto.includes(termo) ? '' : 'none';
+                });
+            }
+
+            // Aplica o filtro padrão de prazos ("A vencer") ao carregar a página
+            document.addEventListener('DOMContentLoaded', function () {
+                filtrarPrazos('a_vencer', document.querySelector('#prazos .btn-sub-filter.active'));
+            });
+        </script>
+    </body>
+    </html>
+    """
+
+    return HTMLResponse(content=html_content)
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
