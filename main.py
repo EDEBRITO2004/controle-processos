@@ -356,7 +356,8 @@ async def home():
                 FROM "Publicações" pub
                 LEFT JOIN "Processos" p 
                     ON TRIM(UPPER(pub."ProcessoNovoCod1")) = TRIM(UPPER(p."ProcessoNovoCod1"))
-                LEFT JOIN "Clientes" c ON p."CodCli" = c."CodCli";
+                LEFT JOIN "Clientes" c ON p."CodCli" = c."CodCli"
+                ORDER BY "DataCumprimento" ASC;
             """)
             prazos = cursor.fetchall()
         except Exception as e:
@@ -481,7 +482,6 @@ async def home():
             f'<div class="card card-prazo item-prazo status-{categoria_prazo}">'
             f'<h3>⏳ Data Cumprimento: {data_cumprimento_fmt}</h3>'
             f'<p><strong>Publicado em:</strong> {data_publicacao_fmt}</p>'
-            f'{prazo_line}'
             f'{proc_line}'
             f'<p><strong>Cliente:</strong> {cliente}</p>'
             f'<p><strong>Manifestação:</strong> {manifestacao}</p>'
