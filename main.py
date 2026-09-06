@@ -519,13 +519,13 @@ async def home():
                 url = 'https://' + url
             btn_link_html = f'''
             <a href="{url}" target="_blank" style="display:inline-block; margin-top:8px; padding:6px 12px; background-color:#0d6efd; color:white; text-decoration:none; border-radius:6px; font-size:0.85rem; font-weight:bold;">
-                🔗 Acessar {sistema_nome or "Sistema"}
+                 Acessar {sistema_nome or "Sistema"}
             </a>
             '''
         else:
             btn_link_html = '''
             <button onclick="alert('Nenhum link cadastrado para este sistema.')" style="margin-top:8px; padding:6px 12px; background-color:#6c757d; color:white; border:none; border-radius:6px; font-size:0.85rem; cursor:pointer;">
-                🔗 Sem link cadastrado
+                 Sem link cadastrado
             </button>
             '''
 
