@@ -507,4 +507,4 @@ async def home():
             <button class="nav-item" onclick="showTab('clientes', this)">👤 Clientes</button>
         </nav>
         <script>
-            function showTab
+        function showTab
