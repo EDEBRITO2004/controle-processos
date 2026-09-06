@@ -36,6 +36,244 @@ def formatar_data(raw_data):
     except Exception:
         return str(raw_data)
 
+# Template HTML limpo utilizando marcadores para substituição segura
+HTML_TEMPLATE = """<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Processos</title>
+    <style>
+        :root {
+            --blue-primary: #0d6efd;
+            --blue-dark: #0a58ca;
+            --red-deadline: #dc3545;
+            --bg-body: #f8f9fa;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-body);
+            margin: 0;
+            padding-bottom: 70px;
+        }
+        header {
+            background-color: var(--blue-dark);
+            color: white;
+            padding: 16px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+        .container {
+            padding: 12px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .section { display: none; }
+        .section.active { display: block; }
+
+        .search-box {
+            margin-bottom: 12px;
+        }
+        .search-box input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            box-sizing: border-box;
+            outline: none;
+        }
+        .search-box input:focus {
+            border-color: var(--blue-primary);
+            box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.25);
+        }
+
+        .sub-filter-bar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .btn-sub-filter {
+            flex: 1;
+            padding: 8px 4px;
+            border: 1px solid #ced4da;
+            background-color: #ffffff;
+            color: #495057;
+            border-radius: 6px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+        }
+        .btn-sub-filter.active {
+            background-color: var(--blue-primary);
+            color: white;
+            border-color: var(--blue-primary);
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 14px;
+            margin-bottom: 10px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            border-left: 4px solid var(--blue-primary);
+        }
+        .card.card-prazo {
+            border-left-color: var(--red-deadline);
+        }
+        .card h3 { margin: 0 0 6px 0; color: var(--blue-dark); font-size: 1rem; }
+        .card.card-prazo h3 { color: var(--red-deadline); }
+        .card p { margin: 3px 0; color: #495057; font-size: 0.9rem; }
+
+        .pub-details {
+            margin-top: 2px;
+        }
+        .pub-details summary {
+            color: var(--blue-dark);
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            outline: none;
+            list-style: none;
+        }
+        .pub-details summary::-webkit-details-marker {
+            display: none;
+        }
+        .pub-content {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            font-size: 0.88rem;
+            color: #333;
+            line-height: 1.4;
+        }
+
+        .sub-proc-list {
+            margin: 4px 0 0 0;
+            padding-left: 18px;
+            font-size: 0.85rem;
+            color: #495057;
+        }
+        .sub-proc-list li {
+            margin-bottom: 4px;
+        }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            background: white;
+            display: flex;
+            justify-content: space-around;
+            padding: 12px 0;
+            border-top: 1px solid #dee2e6;
+        }
+        .nav-item {
+            border: none; background: none;
+            color: #6c757d; font-size: 0.85rem;
+            cursor: pointer;
+        }
+        .nav-item.active {
+            color: var(--blue-primary);
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <header>Controle de Processos</header>
+    <div class="container">
+        <div id="prazos" class="section active">
+            <div class="sub-filter-bar">
+                <button class="btn-sub-filter" onclick="filtrarPrazos('vencidos', this)">Vencidos ({{CNT_VENCIDOS}})</button>
+                <button class="btn-sub-filter" onclick="filtrarPrazos('vencendo', this)">Vencendo ({{CNT_VENCENDO}})</button>
+                <button class="btn-sub-filter active" onclick="filtrarPrazos('a_vencer', this)">A vencer ({{CNT_A_VENCER}})</button>
+            </div>
+            <div id="prazos-list">
+                {{PRAZOS_HTML}}
+            </div>
+        </div>
+        <div id="agenda" class="section">{{AGENDA_HTML}}</div>
+        <div id="processos" class="section">{{PROCESSOS_HTML}}</div>
+        <div id="clientes" class="section">{{CLIENTES_HTML}}</div>
+    </div>
+    <nav class="bottom-nav">
+        <button class="nav-item active" onclick="showTab('prazos', this)">⏳ Prazos</button>
+        <button class="nav-item" onclick="showTab('agenda', this)">📆 Agenda</button>
+        <button class="nav-item" onclick="showTab('processos', this)">📁 Processos</button>
+        <button class="nav-item" onclick="showTab('clientes', this)">👥 Clientes</button>
+    </nav>
+
+    <script>
+        function showTab(tabId, btnEl) {
+            document.querySelectorAll('.section').forEach(function (sec) {
+                sec.classList.remove('active');
+            });
+            document.getElementById(tabId).classList.add('active');
+
+            document.querySelectorAll('.nav-item').forEach(function (btn) {
+                btn.classList.remove('active');
+            });
+            if (btnEl) {
+                btnEl.classList.add('active');
+            }
+        }
+
+        function filtrarPrazos(categoria, btnEl) {
+            document.querySelectorAll('#prazos .btn-sub-filter').forEach(function (btn) {
+                btn.classList.remove('active');
+            });
+            if (btnEl) {
+                btnEl.classList.add('active');
+            }
+
+            var itens = document.querySelectorAll('#prazos-list .item-prazo');
+            var visiveis = 0;
+            itens.forEach(function (item) {
+                if (item.classList.contains('status-' + categoria)) {
+                    item.style.display = '';
+                    visiveis++;
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+
+            document.querySelectorAll('#prazos-list .empty-msg').forEach(function (msg) {
+                msg.style.display = 'none';
+            });
+            if (visiveis === 0) {
+                var msg = document.querySelector('#prazos-list .msg-' + categoria);
+                if (msg) {
+                    msg.style.display = 'block';
+                }
+            }
+        }
+
+        function filtrarProcessos() {
+            var termo = document.getElementById('search-processos').value.toLowerCase();
+            document.querySelectorAll('#lista-processos .card-item-processo').forEach(function (card) {
+                var texto = card.getAttribute('data-search') || '';
+                card.style.display = texto.includes(termo) ? '' : 'none';
+            });
+        }
+
+        function filtrarClientes() {
+            var termo = document.getElementById('search-clientes').value.toLowerCase();
+            document.querySelectorAll('#lista-clientes .card-item-cliente').forEach(function (card) {
+                var texto = card.getAttribute('data-search') || '';
+                card.style.display = texto.includes(termo) ? '' : 'none';
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            filtrarPrazos('a_vencer', document.querySelector('#prazos .btn-sub-filter.active'));
+        });
+    </script>
+</body>
+</html>"""
+
+
 @app.get("/", response_class=HTMLResponse)
 async def home():
     clientes, processos, agenda, prazos = [], [], [], []
@@ -45,7 +283,7 @@ async def home():
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # 1. Clientes
+        # 1. Clientes (sem limite)
         try:
             cursor.execute('SELECT * FROM "Clientes" ORDER BY "Nomecli" ASC;')
             clientes = cursor.fetchall()
@@ -53,7 +291,7 @@ async def home():
             print(f"Erro Clientes: {e}")
             conn.rollback()
 
-        # 2. Processos
+        # 2. Processos (sem limite)
         try:
             cursor.execute("""
                 SELECT 
@@ -75,7 +313,7 @@ async def home():
             print(f"Erro Processos Join: {e}")
             conn.rollback()
 
-        # 3. Agenda
+        # 3. Agenda (sem limite)
         try:
             cursor.execute("""
                 SELECT 
@@ -90,15 +328,14 @@ async def home():
                 WHERE a."Cumprido" IS NULL 
                    OR a."Cumprido" = FALSE 
                    OR CAST(a."Cumprido" AS TEXT) IN ('0', 'false', 'FALSE', 'f', 'F', 'no', 'NO')
-                ORDER BY a."Data" ASC, a."Horário" ASC 
-                ;
+                ORDER BY a."Data" ASC, a."Horário" ASC;
             """)
             agenda = cursor.fetchall()
         except Exception as e:
             print(f"Erro Agenda Join: {e}")
             conn.rollback()
 
-        # 4. Publicações / Prazos
+        # 4. Publicações / Prazos Pendentes (sem limite)
         try:
             cursor.execute("""
                 SELECT 
@@ -109,7 +346,8 @@ async def home():
                 FROM "Publicações" pub
                 LEFT JOIN "Processos" p ON pub."ProcessoNovoCod1" = p."ProcessoNovoCod1"
                 LEFT JOIN "Clientes" c ON pub."CodCli" = c."CodCli"
-                ORDER BY pub."DataCumprimento" DESC;
+                WHERE pub."DataCumprimento" IS NULL
+                ORDER BY pub."DataVencimento" ASC, pub."Data" ASC;
             """)
             prazos = cursor.fetchall()
         except Exception as e:
@@ -176,67 +414,64 @@ async def home():
     counts = {"vencidos": 0, "vencendo": 0, "a_vencer": 0}
 
     for prazo in prazos:
-    cod_novo = prazo.get('ProcessoNovoCod1') or ''
-    num_proc = prazo.get('numero_processo') or ''
-    cliente = prazo.get('cliente_nome') or prazo.get('cliente_empresa') or 'Não informado'
+        cod_novo = prazo.get('ProcessoNovoCod1') or ''
+        num_proc = prazo.get('numero_processo') or ''
+        cliente = prazo.get('cliente_nome') or prazo.get('cliente_empresa') or 'Não informado'
 
-    data_cump = formatar_data(prazo.get('DataCumprimento'))
-    
-    # Pega o campo de vencimento bruto
-    dt_venc_raw = prazo.get('DataVencimento') or prazo.get('Data')
-    data_venc = formatar_data(dt_venc_raw)
-    
-    manifestacao = prazo.get('Manifestação') or prazo.get('Manifestacao') or 'Não informada'
-    publicacao = prazo.get('Publicação') or prazo.get('Publicacao') or prazo.get('Texto') or 'Sem publicação'
+        dt_venc_raw = prazo.get('DataVencimento') or prazo.get('Data')
+        data_venc = formatar_data(dt_venc_raw)
+        data_cump = formatar_data(prazo.get('DataCumprimento'))
+        manifestacao = prazo.get('Manifestação') or prazo.get('Manifestacao') or 'Não informada'
+        publicacao = prazo.get('Publicação') or prazo.get('Publicacao') or prazo.get('Texto') or 'Sem publicação'
 
-    # Converte para date object para comparação
-    dt_ref_obj = None
-    if dt_venc_raw:
-        if hasattr(dt_venc_raw, 'date'):
-            dt_ref_obj = dt_venc_raw.date()
-        elif isinstance(dt_venc_raw, date):
-            dt_ref_obj = dt_venc_raw
+        dt_ref_obj = None
+        if dt_venc_raw:
+            if hasattr(dt_venc_raw, 'date'):
+                dt_ref_obj = dt_venc_raw.date()
+            elif isinstance(dt_venc_raw, date):
+                dt_ref_obj = dt_venc_raw
 
-        if dt_ref_obj and dt_ref_obj.year < 2000:
-            try:
-                ano_corrigido = int(str(dt_ref_obj.year).zfill(4)[-2:]) + 2000
-                dt_ref_obj = dt_ref_obj.replace(year=ano_corrigido)
-            except Exception:
-                pass
+            if dt_ref_obj and dt_ref_obj.year < 2000:
+                try:
+                    ano_corrigido = int(str(dt_ref_obj.year).zfill(4)[-2:]) + 2000
+                    dt_ref_obj = dt_ref_obj.replace(year=ano_corrigido)
+                except Exception:
+                    pass
 
-    categoria_prazo = "a_vencer"
-    if dt_ref_obj:
-        if dt_ref_obj < hoje:
-            categoria_prazo = "vencidos"
-        elif dt_ref_obj == hoje:
-            categoria_prazo = "vencendo"
-        else:
-            categoria_prazo = "a_vencer"
+        categoria_prazo = "a_vencer"
+        if dt_ref_obj:
+            if dt_ref_obj < hoje:
+                categoria_prazo = "vencidos"
+            elif dt_ref_obj == hoje:
+                categoria_prazo = "vencendo"
+            else:
+                categoria_prazo = "a_vencer"
 
-    counts[categoria_prazo] += 1
+        counts[categoria_prazo] += 1
 
-    identificacao_proc = cod_novo
-    if num_proc and num_proc != cod_novo:
-        identificacao_proc += f" ({num_proc})" if cod_novo else num_proc
+        identificacao_proc = cod_novo
+        if num_proc and num_proc != cod_novo:
+            identificacao_proc += f" ({num_proc})" if cod_novo else num_proc
 
-    proc_line = f"<p><strong>Processo:</strong> {identificacao_proc}</p>" if identificacao_proc else ""
+        proc_line = f"<p><strong>Processo:</strong> {identificacao_proc}</p>" if identificacao_proc else ""
 
-    prazos_html += (
-        f'<div class="card card-prazo item-prazo status-{categoria_prazo}">'
-        f'<h3>⏳ Vencimento: {data_venc}</h3>'
-        f'{proc_line}'
-        f'<p><strong>Cliente:</strong> {cliente}</p>'
-        f'<p><strong>Manifestação:</strong> {manifestacao}</p>'
-        '<details class="pub-details">'
-        '<summary>▶ Ver publicação</summary>'
-        f'<div class="pub-content">{publicacao}</div>'
-        '</details>'
-        '</div>'
-    )
+        prazos_html += (
+            f'<div class="card card-prazo item-prazo status-{categoria_prazo}">'
+            f'<h3>⏳ Vencimento: {data_venc}</h3>'
+            f'{proc_line}'
+            f'<p><strong>Cliente:</strong> {cliente}</p>'
+            f'<p><strong>Manifestação:</strong> {manifestacao}</p>'
+            '<details class="pub-details">'
+            '<summary>▶ Ver publicação</summary>'
+            f'<div class="pub-content">{publicacao}</div>'
+            '</details>'
+            '</div>'
+        )
+
     prazos_html += """
-    <div class="empty-msg msg-vencidos" style="display:none; padding:15px; color:#6c757d;">Nenhum prazo com Data Cumprimento anterior a hoje.</div>
-    <div class="empty-msg msg-vencendo" style="display:none; padding:15px; color:#6c757d;">Nenhum prazo com Data Cumprimento para hoje.</div>
-    <div class="empty-msg msg-a_vencer" style="display:none; padding:15px; color:#6c757d;">Nenhum prazo com Data Cumprimento posterior a hoje.</div>
+    <div class="empty-msg msg-vencidos" style="display:none; padding:15px; color:#6c757d;">Nenhum prazo vencido.</div>
+    <div class="empty-msg msg-vencendo" style="display:none; padding:15px; color:#6c757d;">Nenhum prazo vencendo hoje.</div>
+    <div class="empty-msg msg-a_vencer" style="display:none; padding:15px; color:#6c757d;">Nenhum prazo futuro a vencer.</div>
     """
 
     # Renderiza Processos
@@ -334,251 +569,19 @@ async def home():
     if not clientes:
         clientes_html = "<p style='padding:15px;'>Nenhum cliente encontrado.</p>"
 
-    cnt_vencidos = counts['vencidos']
-    cnt_vencendo = counts['vencendo']
-    cnt_a_vencer = counts['a_vencer']
+    # Substituição final do template
+    rendered_html = (
+        HTML_TEMPLATE
+        .replace("{{CNT_VENCIDOS}}", str(counts['vencidos']))
+        .replace("{{CNT_VENCENDO}}", str(counts['vencendo']))
+        .replace("{{CNT_A_VENCER}}", str(counts['a_vencer']))
+        .replace("{{PRAZOS_HTML}}", prazos_html)
+        .replace("{{AGENDA_HTML}}", agenda_html)
+        .replace("{{PROCESSOS_HTML}}", processos_html)
+        .replace("{{CLIENTES_HTML}}", clientes_html)
+    )
 
-    # Montagem do template final usando strings normais (evita conflitos com f-string)
-    html_content = """
-    <!DOCTYPE html>
-    <html lang="pt-BR">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Controle de Processos</title>
-        <style>
-            :root {
-                --blue-primary: #0d6efd;
-                --blue-dark: #0a58ca;
-                --red-deadline: #dc3545;
-                --bg-body: #f8f9fa;
-            }
-            body {
-                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-                background-color: var(--bg-body);
-                margin: 0;
-                padding-bottom: 70px;
-            }
-            header {
-                background-color: var(--blue-dark);
-                color: white;
-                padding: 16px;
-                text-align: center;
-                font-weight: bold;
-                font-size: 1.2rem;
-            }
-            .container {
-                padding: 12px;
-                max-width: 600px;
-                margin: 0 auto;
-            }
-            .section { display: none; }
-            .section.active { display: block; }
-
-            .search-box {
-                margin-bottom: 12px;
-            }
-            .search-box input {
-                width: 100%;
-                padding: 10px 12px;
-                border: 1px solid #ced4da;
-                border-radius: 8px;
-                font-size: 0.9rem;
-                box-sizing: border-box;
-                outline: none;
-            }
-            .search-box input:focus {
-                border-color: var(--blue-primary);
-                box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.25);
-            }
-
-            .sub-filter-bar {
-                display: flex;
-                gap: 8px;
-                margin-bottom: 12px;
-            }
-            .btn-sub-filter {
-                flex: 1;
-                padding: 8px 4px;
-                border: 1px solid #ced4da;
-                background-color: #ffffff;
-                color: #495057;
-                border-radius: 6px;
-                font-size: 0.82rem;
-                font-weight: 600;
-                cursor: pointer;
-                text-align: center;
-            }
-            .btn-sub-filter.active {
-                background-color: var(--blue-primary);
-                color: white;
-                border-color: var(--blue-primary);
-            }
-
-            .card {
-                background: white;
-                border-radius: 10px;
-                padding: 14px;
-                margin-bottom: 10px;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-                border-left: 4px solid var(--blue-primary);
-            }
-            .card.card-prazo {
-                border-left-color: var(--red-deadline);
-            }
-            .card h3 { margin: 0 0 6px 0; color: var(--blue-dark); font-size: 1rem; }
-            .card.card-prazo h3 { color: var(--red-deadline); }
-            .card p { margin: 3px 0; color: #495057; font-size: 0.9rem; }
-
-            .pub-details {
-                margin-top: 2px;
-            }
-            .pub-details summary {
-                color: var(--blue-dark);
-                font-weight: bold;
-                font-size: 1rem;
-                cursor: pointer;
-                outline: none;
-                list-style: none;
-            }
-            .pub-details summary::-webkit-details-marker {
-                display: none;
-            }
-            .pub-content {
-                margin-top: 10px;
-                padding: 10px;
-                background-color: #f8f9fa;
-                border-radius: 6px;
-                font-size: 0.88rem;
-                color: #333;
-                line-height: 1.4;
-            }
-
-            .sub-proc-list {
-                margin: 4px 0 0 0;
-                padding-left: 18px;
-                font-size: 0.85rem;
-                color: #495057;
-            }
-            .sub-proc-list li {
-                margin-bottom: 4px;
-            }
-
-            .bottom-nav {
-                position: fixed;
-                bottom: 0; left: 0; right: 0;
-                background: white;
-                display: flex;
-                justify-content: space-around;
-                padding: 12px 0;
-                border-top: 1px solid #dee2e6;
-            }
-            .nav-item {
-                border: none; background: none;
-                color: #6c757d; font-size: 0.85rem;
-                cursor: pointer;
-            }
-            .nav-item.active {
-                color: var(--blue-primary);
-                font-weight: bold;
-            }
-        </style>
-    </head>
-    <body>
-        <header>Controle de Processos</header>
-        <div class="container">
-            <div id="prazos" class="section active">
-                <div class="sub-filter-bar">
-                    <button class="btn-sub-filter" onclick="filtrarPrazos('vencidos', this)">Vencidos (""" + str(cnt_vencidos) + """)</button>
-                    <button class="btn-sub-filter" onclick="filtrarPrazos('vencendo', this)">Vencendo (""" + str(cnt_vencendo) + """)</button>
-                    <button class="btn-sub-filter active" onclick="filtrarPrazos('a_vencer', this)">A vencer (""" + str(cnt_a_vencer) + """)</button>
-                </div>
-                <div id="prazos-list">
-                    """ + prazos_html + """
-                </div>
-            </div>
-            <div id="agenda" class="section">""" + agenda_html + """</div>
-            <div id="processos" class="section">""" + processos_html + """</div>
-            <div id="clientes" class="section">""" + clientes_html + """</div>
-        </div>
-        <nav class="bottom-nav">
-            <button class="nav-item active" onclick="showTab('prazos', this)">⏳ Prazos</button>
-            <button class="nav-item" onclick="showTab('agenda', this)">📆 Agenda</button>
-            <button class="nav-item" onclick="showTab('processos', this)">📁 Processos</button>
-            <button class="nav-item" onclick="showTab('clientes', this)">👥 Clientes</button>
-        </nav>
-
-        <script>
-            function showTab(tabId, btnEl) {
-                document.querySelectorAll('.section').forEach(function (sec) {
-                    sec.classList.remove('active');
-                });
-                document.getElementById(tabId).classList.add('active');
-
-                document.querySelectorAll('.nav-item').forEach(function (btn) {
-                    btn.classList.remove('active');
-                });
-                if (btnEl) {
-                    btnEl.classList.add('active');
-                }
-            }
-
-            function filtrarPrazos(categoria, btnEl) {
-                document.querySelectorAll('#prazos .btn-sub-filter').forEach(function (btn) {
-                    btn.classList.remove('active');
-                });
-                if (btnEl) {
-                    btnEl.classList.add('active');
-                }
-
-                var itens = document.querySelectorAll('#prazos-list .item-prazo');
-                var visiveis = 0;
-                itens.forEach(function (item) {
-                    if (item.classList.contains('status-' + categoria)) {
-                        item.style.display = '';
-                        visiveis++;
-                    } else {
-                        item.style.display = 'none';
-                    }
-                });
-
-                document.querySelectorAll('#prazos-list .empty-msg').forEach(function (msg) {
-                    msg.style.display = 'none';
-                });
-                if (visiveis === 0) {
-                    var msg = document.querySelector('#prazos-list .msg-' + categoria);
-                    if (msg) {
-                        msg.style.display = 'block';
-                    }
-                }
-            }
-
-            function filtrarProcessos() {
-                var termo = document.getElementById('search-processos').value.toLowerCase();
-                document.querySelectorAll('#lista-processos .card-item-processo').forEach(function (card) {
-                    var texto = card.getAttribute('data-search') || '';
-                    card.style.display = texto.includes(termo) ? '' : 'none';
-                });
-            }
-
-            function filtrarClientes() {
-                var termo = document.getElementById('search-clientes').value.toLowerCase();
-                document.querySelectorAll('#lista-clientes .card-item-cliente').forEach(function (card) {
-                    var texto = card.getAttribute('data-search') || '';
-                    card.style.display = texto.includes(termo) ? '' : 'none';
-                });
-            }
-
-            // Aplica o filtro padrão de prazos ("A vencer") ao carregar a página
-            document.addEventListener('DOMContentLoaded', function () {
-                filtrarPrazos('a_vencer', document.querySelector('#prazos .btn-sub-filter.active'));
-            });
-        </script>
-    </body>
-    </html>
-    """
-
-    return HTMLResponse(content=html_content)
+    return HTMLResponse(content=rendered_html)
 
 
 if __name__ == "__main__":
