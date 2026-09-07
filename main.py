@@ -33,28 +33,71 @@ def get_db_connection():
 
 # Rota principal para carregar o index.html com o splash screen
 import traceback
-
 @app.get("/painel", response_class=HTMLResponse)
 async def carregar_painel(request: Request):
-    return HTMLResponse(
-        content="""
-        <!DOCTYPE html>
-        <html lang="pt-br">
-        <head>
-            <meta charset="UTF-8">
-            <title>Painel de Controle Jurídico</title>
-            <style>
-                body { font-family: sans-serif; background-color: #f4f6f9; padding: 40px; text-align: center; }
-                h1 { color: #0d233a; }
-            </style>
-        </head>
-        <body>
+    conn = get_db_connection()
+    try:
+        # Busca totalizadores do banco de dados
+        total_processos = conn.run("SELECT COUNT(*) FROM processos")[0][0]
+        total_publicacoes = conn.run("SELECT COUNT(*) FROM pje_publicacoes")[0][0]
+    except Exception:
+        total_processos = 0
+        total_publicacoes = 0
+    finally:
+        conn.close()
+
+    html_content = f"""
+    <!DOCTYPE html>
+    <html lang="pt-br">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Painel - Controle Jurídico</title>
+        <style>
+            * {{ box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }}
+            body {{ background-color: #f4f6f9; color: #333; }}
+            header {{ background-color: #0d233a; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }}
+            header h1 {{ font-size: 1.4rem; }}
+            nav a {{ color: #ffcc00; text-decoration: none; font-weight: bold; margin-left: 15px; }}
+            .container {{ max-width: 1100px; margin: 30px auto; padding: 0 20px; }}
+            .cards {{ display: flex; gap: 20px; margin-bottom: 30px; }}
+            .card {{ background: white; padding: 20px; border-radius: 8px; flex: 1; box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: center; }}
+            .card h3 {{ color: #0d233a; font-size: 2rem; margin-bottom: 5px; }}
+            .card p {{ color: #666; font-size: 0.9rem; }}
+            .actions {{ display: flex; gap: 15px; }}
+            .btn {{ background-color: #1e4570; color: white; padding: 12px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; text-align: center; display: inline-block; }}
+            .btn:hover {{ background-color: #0d233a; }}
+        </style>
+    </head>
+    <body>
+        <header>
             <h1>Painel de Controle Jurídico</h1>
-            <p>Bem-vindo ao sistema de controle e acompanhamento de processos.</p>
-        </body>
-        </html>
-        """
-    )
+            <nav>
+                <a href="/">← Sair</a>
+            </nav>
+        </header>
+
+        <div class="container">
+            <div class="cards">
+                <div class="card">
+                    <h3>{total_processos}</h3>
+                    <p>Processos Cadastrados</p>
+                </div>
+                <div class="card">
+                    <h3>{total_publicacoes}</h3>
+                    <p>Publicações do PJe</p>
+                </div>
+            </div>
+
+            <div class="actions">
+                <a href="/processos" class="btn">📁 Ver Processos</a>
+                <a href="/publicacoes" class="btn">📬 Ver Publicações</a>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    return HTMLResponse(content=html_content)    
     
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
