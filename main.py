@@ -646,11 +646,5 @@ async def home():
 
 if __name__ == "__main__":
     import uvicorn
-    import webbrowser
-    from threading import Timer
-
-    def open_browser():
-        webbrowser.open("http://127.0.0.1:8000")
-
-    Timer(1.5, open_browser).start()
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    # Apenas inicia o servidor na porta padrão local
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
