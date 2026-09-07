@@ -158,9 +158,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             border-radius: 6px;
             font-size: 0.88rem;
             box-sizing: border-box;
-            resize: vertical;
-            min-height: 70px;
+            resize: none;
+            overflow-y: hidden;
+            min-height: 50px;
             font-family: inherit;
+            line-height: 1.4;
         }
        .obs-form button {
             align-self: flex-end;
@@ -271,6 +273,20 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             }
         }
 
+        function autoAjustarTextarea(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = textarea.scrollHeight + 'px';
+        }
+
+        function initAutoResize() {
+            document.querySelectorAll('.auto-resize').forEach(function (textarea) {
+                autoAjustarTextarea(textarea);
+                textarea.addEventListener('input', function () {
+                    autoAjustarTextarea(this);
+                });
+            });
+        }
+
         function filtrarPrazos(categoria, btnEl) {
             document.querySelectorAll('#prazos .btn-sub-filter').forEach(function (btn) {
                 btn.classList.remove('active');
@@ -319,6 +335,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         document.addEventListener('DOMContentLoaded', function () {
             filtrarPrazos('a_vencer', document.querySelector('#prazos .btn-sub-filter.active'));
+            initAutoResize();
         });
     </script>
 </body>
@@ -454,7 +471,6 @@ async def home():
 
         proc_line = f"<p><strong>Processo:</strong> {identificacao_proc}</p>" if identificacao_proc else ""
         
-        # Define o título da aba expansível com base na presença de texto prévio
         titulo_obs = "▶ Ver/Editar observação" if obs and obs.strip() else "▶ Adicionar observação"
 
         agenda_html += (
@@ -464,11 +480,11 @@ async def home():
             f'{proc_line}'
             f'<p><strong>Cliente:</strong> {cliente}</p>'
             f'<p><strong>Descrição:</strong> {desc}</p>'
-            '<details class="pub-details">'
+            '<details class="pub-details" onclick="setTimeout(initAutoResize, 50)">'
             f'<summary>{titulo_obs}</summary>'
             '<div class="pub-content">'
             f'<form class="obs-form" action="/agenda/atualizar/{item_id}" method="POST">'
-            f'<textarea name="observacoes" placeholder="Digite aqui as observações...">{obs}</textarea>'
+            f'<textarea name="observacoes" class="auto-resize" placeholder="Digite aqui as observações...">{obs}</textarea>'
             '<button type="submit">💾 Salvar Observação</button>'
             '</form>'
             '</div>'
