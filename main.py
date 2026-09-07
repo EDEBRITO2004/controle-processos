@@ -322,7 +322,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             setTimeout(function(){ toast.className = toast.className.replace("show", ""); }, 3000);
         }
 
-        async defSalvarObservacao(event, form, itemId) {
+        async function salvarObservacao(event, form, itemId) {
             event.preventDefault();
             var formData = new FormData(form);
             try {
@@ -545,7 +545,7 @@ async def home():
             '<details class="pub-details" onclick="setTimeout(initAutoResize, 50)">'
             f'<summary>{titulo_obs}</summary>'
             '<div class="pub-content">'
-            f'<form class="obs-form" onsubmit="defSalvarObservacao(event, this, {item_id})">'
+            f'<form class="obs-form" onsubmit="salvarObservacao(event, this, {item_id})">'
             f'<textarea name="observacoes" class="auto-resize" placeholder="Digite aqui as observações...">{obs}</textarea>'
             '<button type="submit">💾 Salvar Observação</button>'
             '</form>'
