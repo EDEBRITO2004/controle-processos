@@ -2,4 +2,5 @@ fastapi
 uvicorn
 psycopg2-binary
 jinja2
+pg8000
 
