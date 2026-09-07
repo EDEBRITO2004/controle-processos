@@ -29,22 +29,30 @@ def get_db_connection():
         password=DB_PASS,
         host=DB_HOST,
         database=DB_NAME
-    )
-
-# Rota principal para carregar o index.html com o splash screen
-import traceback
-@app.get("/painel", response_class=HTMLResponse)
+ @app.get("/painel", response_class=HTMLResponse)
 async def carregar_painel(request: Request):
-    conn = get_db_connection()
+    total_processos = 0
+    total_publicacoes = 0
+
+    # Consulta segura do total de processos
     try:
-        # Busca totalizadores do banco de dados
-        total_processos = conn.run("SELECT COUNT(*) FROM processos")[0][0]
-        total_publicacoes = conn.run("SELECT COUNT(*) FROM pje_publicacoes")[0][0]
+        conn = get_db_connection()
+        res = conn.run("SELECT COUNT(*) FROM processos")
+        if res and len(res) > 0:
+            total_processos = res[0][0]
+        conn.close()
     except Exception:
         total_processos = 0
-        total_publicacoes = 0
-    finally:
+
+    # Consulta segura do total de publicações
+    try:
+        conn = get_db_connection()
+        res = conn.run("SELECT COUNT(*) FROM pje_publicacoes")
+        if res and len(res) > 0:
+            total_publicacoes = res[0][0]
         conn.close()
+    except Exception:
+        total_publicacoes = 0
 
     html_content = f"""
     <!DOCTYPE html>
@@ -56,16 +64,16 @@ async def carregar_painel(request: Request):
         <style>
             * {{ box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }}
             body {{ background-color: #f4f6f9; color: #333; }}
-            header {{ background-color: #0d233a; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }}
-            header h1 {{ font-size: 1.4rem; }}
-            nav a {{ color: #ffcc00; text-decoration: none; font-weight: bold; margin-left: 15px; }}
-            .container {{ max-width: 1100px; margin: 30px auto; padding: 0 20px; }}
+            header {{ background-color: #0d233a; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }}
+            header h1 {{ font-size: 1.3rem; }}
+            nav a {{ color: #ffcc00; text-decoration: none; font-weight: bold; font-size: 0.95rem; }}
+            .container {{ max-width: 800px; margin: 30px auto; padding: 0 20px; }}
             .cards {{ display: flex; gap: 20px; margin-bottom: 30px; }}
-            .card {{ background: white; padding: 20px; border-radius: 8px; flex: 1; box-shadow: 0 2px 8px rgba(0,0,0,0.08); text-align: center; }}
-            .card h3 {{ color: #0d233a; font-size: 2rem; margin-bottom: 5px; }}
-            .card p {{ color: #666; font-size: 0.9rem; }}
-            .actions {{ display: flex; gap: 15px; }}
-            .btn {{ background-color: #1e4570; color: white; padding: 12px 20px; border-radius: 6px; text-decoration: none; font-weight: bold; text-align: center; display: inline-block; }}
+            .card {{ background: white; padding: 25px 20px; border-radius: 12px; flex: 1; box-shadow: 0 4px 12px rgba(0,0,0,0.05); text-align: center; border-top: 4px solid #1e4570; }}
+            .card h3 {{ color: #0d233a; font-size: 2.2rem; margin-bottom: 5px; }}
+            .card p {{ color: #666; font-size: 0.95rem; font-weight: 500; }}
+            .actions {{ display: flex; gap: 15px; flex-wrap: wrap; }}
+            .btn {{ background-color: #1e4570; color: white; padding: 14px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; text-align: center; flex: 1; min-width: 200px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); transition: background 0.2s; }}
             .btn:hover {{ background-color: #0d233a; }}
         </style>
     </head>
@@ -73,7 +81,7 @@ async def carregar_painel(request: Request):
         <header>
             <h1>Painel de Controle Jurídico</h1>
             <nav>
-                <a href="/">← Sair</a>
+                <a href="/">← Voltar ao Início</a>
             </nav>
         </header>
 
@@ -85,7 +93,7 @@ async def carregar_painel(request: Request):
                 </div>
                 <div class="card">
                     <h3>{total_publicacoes}</h3>
-                    <p>Publicações do PJe</p>
+                    <p>Publicações PJe</p>
                 </div>
             </div>
 
@@ -97,8 +105,7 @@ async def carregar_painel(request: Request):
     </body>
     </html>
     """
-    return HTMLResponse(content=html_content)    
-    
+    return HTMLResponse(content=html_content)   
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
     try:
