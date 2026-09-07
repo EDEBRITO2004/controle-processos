@@ -1,4 +1,4 @@
- # -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 import os
 from datetime import date
 from fastapi import FastAPI, Form, Request
@@ -61,7 +61,7 @@ def get_val(row, *keys):
     return None
 
 # ------------------------------------------------------------------
-# TEMPLATE DA TELA DO PAINEL (CONFORME A IMAGEM)
+# TEMPLATE DA TELA DO PAINEL DASHBOARD
 # ------------------------------------------------------------------
 PAINEL_TEMPLATE = """<!DOCTYPE html>
 <html lang="pt-br">
@@ -126,10 +126,14 @@ PAINEL_TEMPLATE = """<!DOCTYPE html>
 
         <h2 class="modules-title">Módulos de Gestão</h2>
 
-        <!-- Botões para acessar as listas renderizadas -->
+        <!-- Botões vinculados individualmente às suas listas -->
         <div class="modules-grid">
             <a href="/sistema?tab=prazos" class="module-btn">
-                <span>⏳ Agenda & Prazos</span>
+                <span>⏳ Gestão de Prazos</span>
+                <span class="badge-icon">➔</span>
+            </a>
+            <a href="/sistema?tab=agenda" class="module-btn">
+                <span>📆 Agenda & Audiências</span>
                 <span class="badge-icon">➔</span>
             </a>
             <a href="/sistema?tab=processos" class="module-btn">
@@ -146,7 +150,7 @@ PAINEL_TEMPLATE = """<!DOCTYPE html>
 </html>"""
 
 # ------------------------------------------------------------------
-# TEMPLATE DO SISTEMA COMPLETO (LISTAS, FILTROS E OBSERVAÇÕES)
+# TEMPLATE DAS LISTAS (SEM O RODAPÉ DE ATALHOS)
 # ------------------------------------------------------------------
 HTML_TEMPLATE = """<!DOCTYPE html>
 <html lang="pt-BR">
@@ -165,7 +169,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: var(--bg-body);
             margin: 0;
-            padding-bottom: 70px;
+            padding-bottom: 30px;
         }
         header {
             background-color: var(--blue-dark);
@@ -297,24 +301,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
        .sub-proc-list li { margin-bottom: 4px; }
 
-       .bottom-nav {
-            position: fixed;
-            bottom: 0; left: 0; right: 0;
-            background: white;
-            display: flex;
-            justify-content: space-around;
-            padding: 12px 0;
-            border-top: 1px solid #dee2e6;
-        }
-       .nav-item {
-            border: none; background: none;
-            color: #6c757d; font-size: 0.85rem;
-            cursor: pointer;
-        }
-       .nav-item.active {
-            color: var(--blue-primary);
-            font-weight: bold;
-        }
        .erro-banner {
             background: #fff3cd;
             color: #664d03;
@@ -373,27 +359,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         <div id="processos" class="section">{{PROCESSOS_HTML}}</div>
         <div id="clientes" class="section">{{CLIENTES_HTML}}</div>
     </div>
-    <nav class="bottom-nav">
-        <button id="nav-prazos" class="nav-item" onclick="showTab('prazos', this)">⏳ Prazos</button>
-        <button id="nav-agenda" class="nav-item" onclick="showTab('agenda', this)">📆 Agenda</button>
-        <button id="nav-processos" class="nav-item" onclick="showTab('processos', this)">📁 Processos</button>
-        <button id="nav-clientes" class="nav-item" onclick="showTab('clientes', this)">👥 Clientes</button>
-    </nav>
 
     <script>
-        function showTab(tabId, btnEl) {
+        function showTab(tabId) {
             document.querySelectorAll('.section').forEach(function (sec) {
                 sec.classList.remove('active');
             });
             var target = document.getElementById(tabId);
             if (target) target.classList.add('active');
-
-            document.querySelectorAll('.nav-item').forEach(function (btn) {
-                btn.classList.remove('active');
-            });
-            if (btnEl) {
-                btnEl.classList.add('active');
-            }
         }
 
         function autoAjustarTextarea(textarea) {
@@ -491,10 +464,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
 
         document.addEventListener('DOMContentLoaded', function () {
-            // Define a aba ativa inicial via URL (padrão: prazos)
             const urlParams = new URLSearchParams(window.location.search);
             const initialTab = urlParams.get('tab') || 'prazos';
-            showTab(initialTab, document.getElementById('nav-' + initialTab));
+            showTab(initialTab);
 
             filtrarPrazos('a_vencer', document.querySelector('#prazos .btn-sub-filter.active'));
             initAutoResize();
@@ -504,7 +476,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 </html>"""
 
 # ------------------------------------------------------------------
-# ROTA 1: PAINEL DASHBOARD (TELA PRINCIPAL DA IMAGEM)
+# ROTA 1: DASHBOARD
 # ------------------------------------------------------------------
 @app.get("/", response_class=HTMLResponse)
 @app.get("/painel", response_class=HTMLResponse)
@@ -553,7 +525,7 @@ async def painel():
     return HTMLResponse(content=html)
 
 # ------------------------------------------------------------------
-# ROTA 2: MÓDULOS DE GESTÃO (RENDERIZAÇÃO COMPLETA DAS LISTAS)
+# ROTA 2: EXIBIÇÃO DA LISTA SELECIONADA
 # ------------------------------------------------------------------
 @app.get("/sistema", response_class=HTMLResponse)
 async def sistema():
