@@ -28,8 +28,9 @@ def get_db_connection():
         user=DB_USER,
         password=DB_PASS,
         host=DB_HOST,
-        database=DB_NAME
- @app.get("/painel", response_class=HTMLResponse)
+        database=DB_NAME)
+    
+@app.get("/painel", response_class=HTMLResponse)
 async def carregar_painel(request: Request):
     total_processos = 0
     total_publicacoes = 0
