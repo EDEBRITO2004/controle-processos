@@ -34,7 +34,7 @@ def get_db_connection():
 # Rota principal para carregar o index.html com o splash screen
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request}
+    return templates.TemplateResponse("index.html", {"request": request})
                                       
 def get_db_connection():
     return pg8000.native.Connection(
