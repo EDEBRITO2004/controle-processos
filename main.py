@@ -37,9 +37,8 @@ import traceback
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
     try:
-        return templates.TemplateResponse("index.html", {"request": request})
+        return templates.TemplateResponse(request=request, name="index.html")
     except Exception as e:
-        # Exibe o erro detalhado diretamente na tela em vez do erro 500 generico
         error_details = traceback.format_exc()
         return HTMLResponse(
             content=f"<h2>Erro de execução no servidor:</h2><pre>{error_details}</pre>",
