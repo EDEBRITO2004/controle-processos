@@ -243,14 +243,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
 
         function filtrarPrazos(categoria, btnEl) {
-            document.querySelectorAll('#prazos.btn-sub-filter').forEach(function (btn) {
+            document.querySelectorAll('#prazos .btn-sub-filter').forEach(function (btn) {
                 btn.classList.remove('active');
             });
             if (btnEl) {
                 btnEl.classList.add('active');
             }
 
-            var itens = document.querySelectorAll('#prazos-list.item-prazo');
+            var itens = document.querySelectorAll('#prazos-list .item-prazo');
             var visiveis = 0;
             itens.forEach(function (item) {
                 if (item.classList.contains('status-' + categoria)) {
@@ -261,11 +261,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 }
             });
 
-            document.querySelectorAll('#prazos-list.empty-msg').forEach(function (msg) {
+            document.querySelectorAll('#prazos-list .empty-msg').forEach(function (msg) {
                 msg.style.display = 'none';
             });
             if (visiveis === 0) {
-                var msg = document.querySelector('#prazos-list.msg-' + categoria);
+                var msg = document.querySelector('#prazos-list .msg-' + categoria);
                 if (msg) {
                     msg.style.display = 'block';
                 }
@@ -274,22 +274,22 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         function filtrarProcessos() {
             var termo = document.getElementById('search-processos').value.toLowerCase();
-            document.querySelectorAll('#lista-processos.card-item-processo').forEach(function (card) {
+            document.querySelectorAll('#lista-processos .card-item-processo').forEach(function (card) {
                 var texto = card.getAttribute('data-search') || '';
-                card.style.display = texto.includes(termo)? '' : 'none';
+                card.style.display = texto.includes(termo) ? '' : 'none';
             });
         }
 
         function filtrarClientes() {
             var termo = document.getElementById('search-clientes').value.toLowerCase();
-            document.querySelectorAll('#lista-clientes.card-item-cliente').forEach(function (card) {
+            document.querySelectorAll('#lista-clientes .card-item-cliente').forEach(function (card) {
                 var texto = card.getAttribute('data-search') || '';
-                card.style.display = texto.includes(termo)? '' : 'none';
+                card.style.display = texto.includes(termo) ? '' : 'none';
             });
         }
 
         document.addEventListener('DOMContentLoaded', function () {
-            filtrarPrazos('a_vencer', document.querySelector('#prazos.btn-sub-filter.active'));
+            filtrarPrazos('a_vencer', document.querySelector('#prazos .btn-sub-filter.active'));
         });
     </script>
 </body>
@@ -340,6 +340,7 @@ async def home():
                 SELECT
                     a.*,
                     a."Horário" AS horario_compromisso,
+                    a."Observações" AS observacoes_agenda,
                     p."Processo" AS numero_processo,
                     c."Nomecli" AS cliente_nome,
                     c."Empresa" AS cliente_empresa
@@ -396,7 +397,8 @@ async def home():
     agenda_html = ""
     for item in agenda:
         tipo = get_val(item, 'Tipo') or 'Compromisso'
-        desc = get_val(item, 'Tarefa', 'Observações') or 'Sem descrição'
+        desc = get_val(item, 'Tarefa') or 'Sem descrição'
+        obs = get_val(item, 'observacoes_agenda', 'Observações') or ''
         cod_novo = get_val(item, 'ProcessoNovoCod1') or ''
         num_proc = get_val(item, 'numero_processo', 'Processo') or ''
         cliente = get_val(item, 'cliente_nome', 'cliente_empresa', 'NomeCli') or 'Não informado'
@@ -416,10 +418,19 @@ async def home():
         data_hora_exibicao = f"{data_fmt} - {hora_fmt}" if hora_fmt else data_fmt
 
         identificacao_proc = cod_novo
-        if num_proc and num_proc!= cod_novo:
+        if num_proc and num_proc != cod_novo:
             identificacao_proc += f" ({num_proc})" if cod_novo else num_proc
 
         proc_line = f"<p><strong>Processo:</strong> {identificacao_proc}</p>" if identificacao_proc else ""
+
+        obs_html = ""
+        if obs and str(obs).strip():
+            obs_html = (
+                '<details class="pub-details">'
+                '<summary>▶ Ver observações</summary>'
+                f'<div class="pub-content">{obs}</div>'
+                '</details>'
+            )
 
         agenda_html += (
             '<div class="card">'
@@ -428,6 +439,7 @@ async def home():
             f'{proc_line}'
             f'<p><strong>Cliente:</strong> {cliente}</p>'
             f'<p><strong>Descrição:</strong> {desc}</p>'
+            f'{obs_html}'
             '</div>'
         )
     if not agenda:
@@ -478,7 +490,7 @@ async def home():
         counts[categoria_prazo] += 1
 
         identificacao_proc = cod_novo
-        if num_proc and num_proc!= cod_novo:
+        if num_proc and num_proc != cod_novo:
             identificacao_proc += f" ({num_proc})" if cod_novo else num_proc
 
         proc_line = f"<p><strong>Processo:</strong> {identificacao_proc}</p>" if identificacao_proc else ""
@@ -585,7 +597,7 @@ async def home():
                 a_nome = get_val(p_item, 'acao_nome') or 'Ação N/I'
 
                 ident = c_num
-                if num_p and num_p!= c_num:
+                if num_p and num_p != c_num:
                     ident += f" ({num_p})"
                 procs_html += f"<li><strong>{ident}</strong> - {a_nome}</li>"
             procs_html = f"<ul class='sub-proc-list'>{procs_html}</ul>"
