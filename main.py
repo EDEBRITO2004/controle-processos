@@ -632,7 +632,20 @@ async def sistema():
         cliente = get_val(item, 'cliente_nome', 'cliente_empresa', 'NomeCli') or 'Não informado'
 
         raw_hora = get_val(item, 'horario_compromisso', 'Horário')
-        hora_fmt = str(raw_hora).strip()[:5] if raw_hora else ""
+        hora_fmt = ""
+
+if raw_hora is not None:
+    # Se for um objeto datetime/time com hora e minuto
+    if hasattr(raw_hora, 'strftime'):
+        hora_fmt = raw_hora.strftime('%H:%M')
+    else:
+        # Se for string, extrai os dígitos ou pega do final (HH:MM)
+        txt = str(raw_hora).strip()
+        if ' ' in txt:
+            txt = txt.split()[-1]  # Pega apenas a parte do horário "HH:MM:SS"
+        if ':' in txt:
+            partes = txt.split(':')
+            hora_fmt = f"{partes[0].zfill(2)}:{partes[1].zfill(2)}"
 
         data_fmt = formatar_data(get_val(item, 'Data'))
         data_hora_exibicao = f"{data_fmt} - {hora_fmt}" if hora_fmt else data_fmt
