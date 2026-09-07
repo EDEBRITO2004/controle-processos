@@ -634,7 +634,7 @@ async def sistema():
         raw_hora = get_val(item, 'horario_compromisso', 'Horário')
         hora_fmt = ""
 
-if raw_hora is not None:
+  if raw_hora is not None:
     # Se for um objeto datetime/time com hora e minuto
     if hasattr(raw_hora, 'strftime'):
         hora_fmt = raw_hora.strftime('%H:%M')
