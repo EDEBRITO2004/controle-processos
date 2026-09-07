@@ -3,18 +3,34 @@ import os
 from datetime import date
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
-import psycopg2
-from psycopg2.extras import RealDictCursor
+import pg8000.native
 
 app = FastAPI()
 
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://controle_processos_lnju_user:J7I5L81oYnOyPcxRIO5FqBkx1RP0HQoX@dpg-dac0l9jtqb8s73dqjh00-a.virginia-postgres.render.com/controle_processos_lnju"
-)
+DB_USER = "controle_processos_lnju_user"
+DB_PASS = "J7I5L81oYnOyPcxRIO5FqBkx1RP0HQoX"
+DB_HOST = "dpg-dac0l9jtqb8s73dqjh00-a.virginia-postgres.render.com"
+DB_NAME = "controle_processos_lnju"
 
 def get_db_connection():
-    return psycopg2.connect(DATABASE_URL, sslmode='require', cursor_factory=RealDictCursor)
+    return pg8000.native.Connection(
+        user=DB_USER,
+        password=DB_PASS,
+        host=DB_HOST,
+        database=DB_NAME,
+        ssl_context=True
+    )
+
+def fetch_all_dict(conn, query):
+    try:
+        res = conn.run(query)
+        if not res:
+            return []
+        cols = [col['name'] for col in conn.columns]
+        return [dict(zip(cols, row)) for row in res]
+    except Exception as e:
+        print(f"Erro na query: {query[:60]}... Erro: {e}")
+        return []
 
 def formatar_data(raw_data):
     if not raw_data:
@@ -37,7 +53,6 @@ def formatar_data(raw_data):
     except Exception:
         return str(raw_data)
 
-# Helper para buscar valor em dicionario testando varios nomes de chaves/colunas
 def get_val(row, *keys):
     for k in keys:
         if k in row and row[k] is not None:
@@ -71,18 +86,16 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             font-weight: bold;
             font-size: 1.2rem;
         }
-        .container {
+       .container {
             padding: 12px;
             max-width: 600px;
             margin: 0 auto;
         }
-        .section { display: none; }
-        .section.active { display: block; }
+       .section { display: none; }
+       .section.active { display: block; }
 
-        .search-box {
-            margin-bottom: 12px;
-        }
-        .search-box input {
+       .search-box { margin-bottom: 12px; }
+       .search-box input {
             width: 100%;
             padding: 10px 12px;
             border: 1px solid #ced4da;
@@ -91,17 +104,17 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             box-sizing: border-box;
             outline: none;
         }
-        .search-box input:focus {
+       .search-box input:focus {
             border-color: var(--blue-primary);
             box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.25);
         }
 
-        .sub-filter-bar {
+       .sub-filter-bar {
             display: flex;
             gap: 8px;
             margin-bottom: 12px;
         }
-        .btn-sub-filter {
+       .btn-sub-filter {
             flex: 1;
             padding: 8px 4px;
             border: 1px solid #ced4da;
@@ -113,13 +126,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             cursor: pointer;
             text-align: center;
         }
-        .btn-sub-filter.active {
+       .btn-sub-filter.active {
             background-color: var(--blue-primary);
             color: white;
             border-color: var(--blue-primary);
         }
 
-        .card {
+       .card {
             background: white;
             border-radius: 10px;
             padding: 14px;
@@ -127,17 +140,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             box-shadow: 0 1px 3px rgba(0,0,0,0.08);
             border-left: 4px solid var(--blue-primary);
         }
-        .card.card-prazo {
-            border-left-color: var(--red-deadline);
-        }
-        .card h3 { margin: 0 0 6px 0; color: var(--blue-dark); font-size: 1rem; }
-        .card.card-prazo h3 { color: var(--red-deadline); }
-        .card p { margin: 3px 0; color: #495057; font-size: 0.9rem; }
+       .card.card-prazo { border-left-color: var(--red-deadline); }
+       .card h3 { margin: 0 0 6px 0; color: var(--blue-dark); font-size: 1rem; }
+       .card.card-prazo h3 { color: var(--red-deadline); }
+       .card p { margin: 3px 0; color: #495057; font-size: 0.9rem; }
 
-        .pub-details {
-            margin-top: 6px;
-        }
-        .pub-details summary {
+       .pub-details { margin-top: 6px; }
+       .pub-details summary {
             color: var(--blue-dark);
             font-weight: bold;
             font-size: 0.9rem;
@@ -145,10 +154,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             outline: none;
             list-style: none;
         }
-        .pub-details summary::-webkit-details-marker {
-            display: none;
-        }
-        .pub-content {
+       .pub-details summary::-webkit-details-marker { display: none; }
+       .pub-content {
             margin-top: 8px;
             padding: 10px;
             background-color: #f8f9fa;
@@ -159,17 +166,15 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             white-space: pre-wrap;
         }
 
-        .sub-proc-list {
+       .sub-proc-list {
             margin: 4px 0 0 0;
             padding-left: 18px;
             font-size: 0.85rem;
             color: #495057;
         }
-        .sub-proc-list li {
-            margin-bottom: 4px;
-        }
+       .sub-proc-list li { margin-bottom: 4px; }
 
-        .bottom-nav {
+       .bottom-nav {
             position: fixed;
             bottom: 0; left: 0; right: 0;
             background: white;
@@ -178,20 +183,29 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             padding: 12px 0;
             border-top: 1px solid #dee2e6;
         }
-        .nav-item {
+       .nav-item {
             border: none; background: none;
             color: #6c757d; font-size: 0.85rem;
             cursor: pointer;
         }
-        .nav-item.active {
+       .nav-item.active {
             color: var(--blue-primary);
             font-weight: bold;
+        }
+       .erro-banner {
+            background: #fff3cd;
+            color: #664d03;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            border: 1px solid #ffecb5;
         }
     </style>
 </head>
 <body>
     <header>Controle de Processos</header>
     <div class="container">
+        {{ERRO_BANNER}}
         <div id="prazos" class="section active">
             <div class="sub-filter-bar">
                 <button class="btn-sub-filter" onclick="filtrarPrazos('vencidos', this)">Vencidos ({{CNT_VENCIDOS}})</button>
@@ -229,14 +243,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
 
         function filtrarPrazos(categoria, btnEl) {
-            document.querySelectorAll('#prazos .btn-sub-filter').forEach(function (btn) {
+            document.querySelectorAll('#prazos.btn-sub-filter').forEach(function (btn) {
                 btn.classList.remove('active');
             });
             if (btnEl) {
                 btnEl.classList.add('active');
             }
 
-            var itens = document.querySelectorAll('#prazos-list .item-prazo');
+            var itens = document.querySelectorAll('#prazos-list.item-prazo');
             var visiveis = 0;
             itens.forEach(function (item) {
                 if (item.classList.contains('status-' + categoria)) {
@@ -247,11 +261,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 }
             });
 
-            document.querySelectorAll('#prazos-list .empty-msg').forEach(function (msg) {
+            document.querySelectorAll('#prazos-list.empty-msg').forEach(function (msg) {
                 msg.style.display = 'none';
             });
             if (visiveis === 0) {
-                var msg = document.querySelector('#prazos-list .msg-' + categoria);
+                var msg = document.querySelector('#prazos-list.msg-' + categoria);
                 if (msg) {
                     msg.style.display = 'block';
                 }
@@ -260,49 +274,46 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         function filtrarProcessos() {
             var termo = document.getElementById('search-processos').value.toLowerCase();
-            document.querySelectorAll('#lista-processos .card-item-processo').forEach(function (card) {
+            document.querySelectorAll('#lista-processos.card-item-processo').forEach(function (card) {
                 var texto = card.getAttribute('data-search') || '';
-                card.style.display = texto.includes(termo) ? '' : 'none';
+                card.style.display = texto.includes(termo)? '' : 'none';
             });
         }
 
         function filtrarClientes() {
             var termo = document.getElementById('search-clientes').value.toLowerCase();
-            document.querySelectorAll('#lista-clientes .card-item-cliente').forEach(function (card) {
+            document.querySelectorAll('#lista-clientes.card-item-cliente').forEach(function (card) {
                 var texto = card.getAttribute('data-search') || '';
-                card.style.display = texto.includes(termo) ? '' : 'none';
+                card.style.display = texto.includes(termo)? '' : 'none';
             });
         }
 
         document.addEventListener('DOMContentLoaded', function () {
-            filtrarPrazos('a_vencer', document.querySelector('#prazos .btn-sub-filter.active'));
+            filtrarPrazos('a_vencer', document.querySelector('#prazos.btn-sub-filter.active'));
         });
     </script>
 </body>
 </html>"""
 
-
 @app.get("/", response_class=HTMLResponse)
 async def home():
     clientes, processos, agenda, prazos = [], [], [], []
     hoje = date.today()
+    conn = None
+    erro_db = ""
 
     try:
         conn = get_db_connection()
-        cursor = conn.cursor()
 
-        # 1. Clientes
         try:
-            cursor.execute('SELECT * FROM "Clientes" ORDER BY "Nomecli" ASC;')
-            clientes = cursor.fetchall()
+            clientes = fetch_all_dict(conn, 'SELECT * FROM "Clientes" ORDER BY "Nomecli" ASC;')
         except Exception as e:
             print(f"Erro Clientes: {e}")
-            conn.rollback()
+            erro_db += f"Clientes: {e}; "
 
-        # 2. Processos (incluindo JOIN com a tabela Sistemas)
         try:
-            cursor.execute("""
-                SELECT 
+            q_proc = """
+                SELECT
                     p."ProcessoNovoCod1",
                     p."Processo",
                     p."CodCli",
@@ -318,16 +329,15 @@ async def home():
                 LEFT JOIN "Ações" a ON p."Ação" = a."Código"
                 LEFT JOIN "Sistemas" s ON p."Sistema" = s."Código"
                 ORDER BY p."Código" DESC;
-            """)
-            processos = cursor.fetchall()
+            """
+            processos = fetch_all_dict(conn, q_proc)
         except Exception as e:
             print(f"Erro Processos Join: {e}")
-            conn.rollback()
+            erro_db += f"Processos: {e}; "
 
-        # 3. Agenda
         try:
-            cursor.execute("""
-                SELECT 
+            q_ag = """
+                SELECT
                     a.*,
                     a."Horário" AS horario_compromisso,
                     p."Processo" AS numero_processo,
@@ -336,42 +346,45 @@ async def home():
                 FROM "Agenda" a
                 LEFT JOIN "Processos" p ON a."ProcessoNovoCod1" = p."ProcessoNovoCod1"
                 LEFT JOIN "Clientes" c ON p."CodCli" = c."CodCli"
-                WHERE a."Cumprido" IS NULL 
-                   OR a."Cumprido" = FALSE 
+                WHERE a."Cumprido" IS NULL
+                   OR a."Cumprido" = FALSE
                    OR CAST(a."Cumprido" AS TEXT) IN ('0', 'false', 'FALSE', 'f', 'F', 'no', 'NO')
                 ORDER BY a."Data" ASC, a."Horário" ASC;
-            """)
-            agenda = cursor.fetchall()
+            """
+            agenda = fetch_all_dict(conn, q_ag)
         except Exception as e:
             print(f"Erro Agenda Join: {e}")
-            conn.rollback()
+            erro_db += f"Agenda: {e}; "
 
-        # 4. Publicações / Prazos
         try:
-            cursor.execute("""
-                SELECT 
+            q_pub = """
+                SELECT
                     pub.*,
                     p."ProcessoNovoCod1" AS proc_cod_vinculado,
                     p."Processo" AS numero_processo,
                     c."Nomecli" AS cliente_nome,
                     c."Empresa" AS cliente_empresa
                 FROM "Publicações" pub
-                LEFT JOIN "Processos" p 
+                LEFT JOIN "Processos" p
                     ON TRIM(UPPER(pub."ProcessoNovoCod1")) = TRIM(UPPER(p."ProcessoNovoCod1"))
                 LEFT JOIN "Clientes" c ON p."CodCli" = c."CodCli"
                 ORDER BY "DataCumprimento" ASC;
-            """)
-            prazos = cursor.fetchall()
+            """
+            prazos = fetch_all_dict(conn, q_pub)
         except Exception as e:
             print(f"Erro Publicações Join: {e}")
-            conn.rollback()
+            erro_db += f"Publicações: {e}; "
 
-        cursor.close()
-        conn.close()
     except Exception as err:
-        print(f"Erro Conexao: {err}")
+        erro_db = f"Erro Conexao: {err}"
+        print(erro_db)
+    finally:
+        if conn:
+            try:
+                conn.close()
+            except Exception as e:
+                print(f"Erro ao fechar conexão: {e}")
 
-    # Mapeia processos por Cliente
     processos_por_cliente = {}
     for proc in processos:
         cod_cli = proc.get('CodCli')
@@ -380,7 +393,6 @@ async def home():
                 processos_por_cliente[cod_cli] = []
             processos_por_cliente[cod_cli].append(proc)
 
-    # Renderiza Agenda
     agenda_html = ""
     for item in agenda:
         tipo = get_val(item, 'Tipo') or 'Compromisso'
@@ -404,7 +416,7 @@ async def home():
         data_hora_exibicao = f"{data_fmt} - {hora_fmt}" if hora_fmt else data_fmt
 
         identificacao_proc = cod_novo
-        if num_proc and num_proc != cod_novo:
+        if num_proc and num_proc!= cod_novo:
             identificacao_proc += f" ({num_proc})" if cod_novo else num_proc
 
         proc_line = f"<p><strong>Processo:</strong> {identificacao_proc}</p>" if identificacao_proc else ""
@@ -421,7 +433,6 @@ async def home():
     if not agenda:
         agenda_html = "<p style='padding:15px;'>Nenhum registro pendente na Agenda.</p>"
 
-    # Renderiza Prazos
     prazos_html = ""
     counts = {"vencidos": 0, "vencendo": 0, "a_vencer": 0}
 
@@ -440,7 +451,6 @@ async def home():
 
         manifestacao = get_val(prazo, 'Manifestação') or 'Não informada'
         publicacao = get_val(prazo, 'Publicação', 'Observações') or 'Sem texto de publicação'
-        prazo_desc = get_val(prazo, 'Prazo') or ''
 
         dt_ref_obj = None
         if dt_ref_raw:
@@ -468,11 +478,10 @@ async def home():
         counts[categoria_prazo] += 1
 
         identificacao_proc = cod_novo
-        if num_proc and num_proc != cod_novo:
+        if num_proc and num_proc!= cod_novo:
             identificacao_proc += f" ({num_proc})" if cod_novo else num_proc
 
         proc_line = f"<p><strong>Processo:</strong> {identificacao_proc}</p>" if identificacao_proc else ""
-        prazo_line = f"<p><strong>Prazo:</strong> {prazo_desc}</p>" if prazo_desc else ""
 
         prazos_html += (
             f'<div class="card card-prazo item-prazo status-{categoria_prazo}">'
@@ -494,7 +503,6 @@ async def home():
     <div class="empty-msg msg-a_vencer" style="display:none; padding:15px; color:#6c757d;">Nenhum prazo futuro a vencer.</div>
     """
 
-    # Renderiza Processos
     processos_html = """
     <div class="search-box">
         <input type="text" id="search-processos" placeholder="🔍 Buscar processo, cliente, ação..." onkeyup="filtrarProcessos()">
@@ -508,24 +516,23 @@ async def home():
         parte_contraria = get_val(proc, 'parte_contraria') or 'Não informada'
         acao = get_val(proc, 'acao_nome') or 'Não informada'
         vara = get_val(proc, 'Vara') or 'Não informada'
-        
+
         sistema_nome = get_val(proc, 'sistema_nome') or ''
         sistema_link = get_val(proc, 'sistema_link') or ''
 
-        # Botão de Link para o Sistema
         if sistema_link and str(sistema_link).strip():
             url = str(sistema_link).strip()
             if not url.startswith(('http://', 'https://')):
                 url = 'https://' + url
             btn_link_html = f'''
             <a href="{url}" target="_blank" style="display:inline-block; margin-top:8px; padding:6px 12px; background-color:#0d6efd; color:white; text-decoration:none; border-radius:6px; font-size:0.85rem; font-weight:bold;">
-                &#128279; Acessar {sistema_nome or "Sistema"}
+                🔗 Acessar {sistema_nome or "Sistema"}
             </a>
             '''
         else:
             btn_link_html = '''
             <button onclick="alert('Nenhum link cadastrado para este sistema.')" style="margin-top:8px; padding:6px 12px; background-color:#6c757d; color:white; border:none; border-radius:6px; font-size:0.85rem; cursor:pointer;">
-                &#128279; Sem link cadastrado
+                🔗 Sem link cadastrado
             </button>
             '''
 
@@ -549,7 +556,6 @@ async def home():
     if not processos:
         processos_html = "<p style='padding:15px;'>Nenhum processo encontrado.</p>"
 
-    # Renderiza Clientes
     clientes_html = """
     <div class="search-box">
         <input type="text" id="search-clientes" placeholder="🔍 Buscar por nome, CPF/CNPJ, cidade..." onkeyup="filtrarClientes()">
@@ -579,7 +585,7 @@ async def home():
                 a_nome = get_val(p_item, 'acao_nome') or 'Ação N/I'
 
                 ident = c_num
-                if num_p and num_p != c_num:
+                if num_p and num_p!= c_num:
                     ident += f" ({num_p})"
                 procs_html += f"<li><strong>{ident}</strong> - {a_nome}</li>"
             procs_html = f"<ul class='sub-proc-list'>{procs_html}</ul>"
@@ -610,21 +616,29 @@ async def home():
     if not clientes:
         clientes_html = "<p style='padding:15px;'>Nenhum cliente encontrado.</p>"
 
-    # Substituição final do template
+    erro_banner = f'<div class="erro-banner">⚠️ Erro ao conectar no banco: {erro_db}</div>' if erro_db else ""
+
     rendered_html = (
         HTML_TEMPLATE
-        .replace("{{CNT_VENCIDOS}}", str(counts['vencidos']))
-        .replace("{{CNT_VENCENDO}}", str(counts['vencendo']))
-        .replace("{{CNT_A_VENCER}}", str(counts['a_vencer']))
-        .replace("{{PRAZOS_HTML}}", prazos_html)
-        .replace("{{AGENDA_HTML}}", agenda_html)
-        .replace("{{PROCESSOS_HTML}}", processos_html)
-        .replace("{{CLIENTES_HTML}}", clientes_html)
+       .replace("{{ERRO_BANNER}}", erro_banner)
+       .replace("{{CNT_VENCIDOS}}", str(counts['vencidos']))
+       .replace("{{CNT_VENCENDO}}", str(counts['vencendo']))
+       .replace("{{CNT_A_VENCER}}", str(counts['a_vencer']))
+       .replace("{{PRAZOS_HTML}}", prazos_html)
+       .replace("{{AGENDA_HTML}}", agenda_html)
+       .replace("{{PROCESSOS_HTML}}", processos_html)
+       .replace("{{CLIENTES_HTML}}", clientes_html)
     )
 
     return HTMLResponse(content=rendered_html)
 
-
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
+    import webbrowser
+    from threading import Timer
+
+    def open_browser():
+        webbrowser.open("http://127.0.0.1:8000")
+
+    Timer(1.5, open_browser).start()
+    uvicorn.run(app, host="127.0.0.1", port=8000)
