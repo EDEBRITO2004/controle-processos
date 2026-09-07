@@ -34,6 +34,28 @@ def get_db_connection():
 # Rota principal para carregar o index.html com o splash screen
 import traceback
 
+@app.get("/painel", response_class=HTMLResponse)
+async def carregar_painel(request: Request):
+    return HTMLResponse(
+        content="""
+        <!DOCTYPE html>
+        <html lang="pt-br">
+        <head>
+            <meta charset="UTF-8">
+            <title>Painel de Controle Jurídico</title>
+            <style>
+                body { font-family: sans-serif; background-color: #f4f6f9; padding: 40px; text-align: center; }
+                h1 { color: #0d233a; }
+            </style>
+        </head>
+        <body>
+            <h1>Painel de Controle Jurídico</h1>
+            <p>Bem-vindo ao sistema de controle e acompanhamento de processos.</p>
+        </body>
+        </html>
+        """
+    )
+    
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
     try:
