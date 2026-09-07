@@ -2,7 +2,7 @@
 import os
 from datetime import date
 from fastapi import FastAPI, Form
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 import pg8000.native
 
 app = FastAPI()
@@ -231,10 +231,38 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             margin-bottom: 12px;
             border: 1px solid #ffecb5;
         }
+
+        /* Toast de notificação */
+        #toast {
+            visibility: hidden;
+            min-width: 250px;
+            background-color: #198754;
+            color: #fff;
+            text-align: center;
+            border-radius: 8px;
+            padding: 12px;
+            position: fixed;
+            z-index: 1000;
+            left: 50%;
+            top: 20px;
+            transform: translateX(-50%);
+            font-size: 0.9rem;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+            opacity: 0;
+            transition: opacity 0.3s, top 0.3s;
+        }
+        #toast.show {
+            visibility: visible;
+            opacity: 1;
+            top: 30px;
+        }
     </style>
 </head>
 <body>
     <header>Controle de Processos</header>
+    <div id="toast">✅ Observação salva com sucesso!</div>
+
     <div class="container">
         {{ERRO_BANNER}}
         <div id="prazos" class="section active">
@@ -285,6 +313,40 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     autoAjustarTextarea(this);
                 });
             });
+        }
+
+        function showToast(mensagem) {
+            var toast = document.getElementById("toast");
+            if (mensagem) toast.innerText = mensagem;
+            toast.className = "show";
+            setTimeout(function(){ toast.className = toast.className.replace("show", ""); }, 3000);
+        }
+
+        async defSalvarObservacao(event, form, itemId) {
+            event.preventDefault();
+            var formData = new FormData(form);
+            try {
+                var response = await fetch('/agenda/atualizar/' + itemId, {
+                    method: 'POST',
+                    body: formData
+                });
+                var res = await response.json();
+                if (res.status === 'ok') {
+                    showToast("✅ Observação salva com sucesso!");
+                    var details = form.closest('details');
+                    if (details) {
+                        var summary = details.querySelector('summary');
+                        var val = formData.get('observacoes') || '';
+                        if (summary) {
+                            summary.innerText = val.trim() ? "▶ Ver/Editar observação" : "▶ Adicionar observação";
+                        }
+                    }
+                } else {
+                    alert("Erro ao salvar: " + (res.message || "Erro desconhecido"));
+                }
+            } catch (err) {
+                alert("Erro na requisição: " + err);
+            }
         }
 
         function filtrarPrazos(categoria, btnEl) {
@@ -483,7 +545,7 @@ async def home():
             '<details class="pub-details" onclick="setTimeout(initAutoResize, 50)">'
             f'<summary>{titulo_obs}</summary>'
             '<div class="pub-content">'
-            f'<form class="obs-form" action="/agenda/atualizar/{item_id}" method="POST">'
+            f'<form class="obs-form" onsubmit="defSalvarObservacao(event, this, {item_id})">'
             f'<textarea name="observacoes" class="auto-resize" placeholder="Digite aqui as observações...">{obs}</textarea>'
             '<button type="submit">💾 Salvar Observação</button>'
             '</form>'
@@ -702,16 +764,16 @@ async def atualizar_observacao_agenda(item_id: int, observacoes: str = Form(None
         
         query = 'UPDATE "Agenda" SET "Observações" = :obs WHERE "Código" = :id'
         conn.run(query, obs=texto_obs, id=item_id)
+        return JSONResponse(content={"status": "ok"})
     except Exception as e:
         print(f"Erro ao atualizar observação da agenda: {e}")
+        return JSONResponse(content={"status": "error", "message": str(e)}, status_code=500)
     finally:
         if conn:
             try:
                 conn.close()
             except Exception:
                 pass
-
-    return RedirectResponse(url="/", status_code=303)
 
 if __name__ == "__main__":
     import uvicorn
