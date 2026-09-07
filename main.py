@@ -32,9 +32,19 @@ def get_db_connection():
     )
 
 # Rota principal para carregar o index.html com o splash screen
+import traceback
+
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    try:
+        return templates.TemplateResponse("index.html", {"request": request})
+    except Exception as e:
+        # Exibe o erro detalhado diretamente na tela em vez do erro 500 generico
+        error_details = traceback.format_exc()
+        return HTMLResponse(
+            content=f"<h2>Erro de execução no servidor:</h2><pre>{error_details}</pre>",
+            status_code=500
+        )
                                       
 def get_db_connection():
     return pg8000.native.Connection(
