@@ -146,10 +146,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
        .card p { margin: 3px 0; color: #495057; font-size: 0.9rem; }
 
        .obs-form {
-            margin-top: 10px;
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            gap: 8px;
+            margin-top: 4px;
         }
        .obs-form textarea {
             width: 100%;
@@ -159,7 +159,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             font-size: 0.88rem;
             box-sizing: border-box;
             resize: vertical;
-            min-height: 60px;
+            min-height: 70px;
             font-family: inherit;
         }
        .obs-form button {
@@ -167,7 +167,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             background-color: var(--blue-primary);
             color: white;
             border: none;
-            padding: 6px 12px;
+            padding: 6px 14px;
             border-radius: 6px;
             font-size: 0.82rem;
             font-weight: bold;
@@ -453,6 +453,9 @@ async def home():
             identificacao_proc += f" ({num_proc})" if cod_novo else num_proc
 
         proc_line = f"<p><strong>Processo:</strong> {identificacao_proc}</p>" if identificacao_proc else ""
+        
+        # Define o título da aba expansível com base na presença de texto prévio
+        titulo_obs = "▶ Ver/Editar observação" if obs and obs.strip() else "▶ Adicionar observação"
 
         agenda_html += (
             '<div class="card">'
@@ -461,11 +464,15 @@ async def home():
             f'{proc_line}'
             f'<p><strong>Cliente:</strong> {cliente}</p>'
             f'<p><strong>Descrição:</strong> {desc}</p>'
+            '<details class="pub-details">'
+            f'<summary>{titulo_obs}</summary>'
+            '<div class="pub-content">'
             f'<form class="obs-form" action="/agenda/atualizar/{item_id}" method="POST">'
-            f'<label style="font-size:0.85rem; font-weight:bold; color:#495057;">Observações:</label>'
             f'<textarea name="observacoes" placeholder="Digite aqui as observações...">{obs}</textarea>'
             '<button type="submit">💾 Salvar Observação</button>'
             '</form>'
+            '</div>'
+            '</details>'
             '</div>'
         )
     if not agenda:
