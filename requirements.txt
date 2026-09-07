@@ -3,4 +3,5 @@ uvicorn
 psycopg2-binary
 jinja2
 pg8000
+python-multipart
 
