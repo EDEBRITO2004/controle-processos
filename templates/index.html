@@ -1,52 +1,113 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Controle Jurídico</title>
-    <!-- Link para o CSS externo dentro da pasta static -->
-    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0d233a 0%, #1e4570 50%, #2a5298 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .logo-scale {
+            width: 140px;
+            height: auto;
+            margin-bottom: 25px;
+            filter: drop-shadow(0px 4px 8px rgba(0, 0, 0, 0.3));
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: #ffffff;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: #dcdcdc;
+            margin-bottom: 5px;
+        }
+
+        .instruction {
+            font-size: 1rem;
+            color: #b0c4de;
+            margin-bottom: 30px;
+        }
+
+        .btn-iniciar {
+            background-color: #ffcc00;
+            color: #0d233a;
+            font-size: 1.25rem;
+            font-weight: bold;
+            padding: 16px 38px;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .btn-iniciar:hover {
+            background-color: #e6b800;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 22px rgba(0, 0, 0, 0.4);
+        }
+
+        .btn-iniciar:active {
+            transform: translateY(1px);
+        }
+    </style>
 </head>
 <body>
 
-    <!-- TELA DE ENTRADA (SPLASH SCREEN) -->
-    <div id="splash-screen">
-        <div class="splash-content">
-            <!-- Ícone de Balança Dourada em SVG -->
-            <svg class="splash-icon" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <!-- Haste Vertical -->
-                <rect x="47.5" y="25" width="5" height="42" fill="#ffca28"/>
-                <!-- Base da Balança -->
-                <polygon points="35,72 65,72 58,67 42,67" fill="#ffca28"/>
-                <!-- Topo / Esfera -->
-                <circle cx="50" cy="22" r="5" fill="#ffca28"/>
-                <!-- Trave Horizontal -->
-                <rect x="20" y="32" width="60" height="4" fill="#ffca28"/>
-                <!-- Prato Esquerdo -->
-                <line x1="25" y1="36" x2="20" y2="52" stroke="#ffca28" stroke-width="2"/>
-                <line x1="25" y1="36" x2="30" y2="52" stroke="#ffca28" stroke-width="2"/>
-                <path d="M 18 52 Q 25 60 32 52 Z" fill="#ffca28"/>
-                <!-- Prato Direito -->
-                <line x1="75" y1="36" x2="70" y2="52" stroke="#ffca28" stroke-width="2"/>
-                <line x1="75" y1="36" x2="80" y2="52" stroke="#ffca28" stroke-width="2"/>
-                <path d="M 68 52 Q 75 60 82 52 Z" fill="#ffca28"/>
-            </svg>
+    <div class="container">
+        <!-- Ícone da Balança da Justiça -->
+        <svg class="logo-scale" viewBox="0 0 24 24" fill="#ffcc00" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2C11.4477 2 11 2.44772 11 3V4.06186C7.05367 4.51527 4 7.90793 4 12C4 12.5523 4.44772 13 5 13C5.55228 13 6 12.5523 6 12C6 8.68629 8.68629 6 12 6C15.3137 6 18 8.68629 18 12C18 12.5523 18.4477 13 19 13C19.5523 13 20 12.5523 20 12C20 7.90793 16.9463 4.51527 13 4.06186V3C13 2.44772 12.5523 2 12 2Z"/>
+            <path d="M11 21V15H13V21H11Z"/>
+            <path d="M7 22H17V20H7V22Z"/>
+            <path d="M2 10L6 17H2L2 10Z"/>
+            <path d="M22 10L18 17H22L22 10Z"/>
+        </svg>
 
-            <h1 class="splash-title">Controle Jurídico</h1>
-            <div class="splash-subtitle">Por Ede Brito</div>
-            <div class="splash-instruction">Clique abaixo para iniciar</div>
-            
-            <button class="btn-iniciar" onclick="fecharSplash()">🚀 Iniciar Sistema</button>
-        </div>
+        <h1>Controle Jurídico</h1>
+        <p class="subtitle">Por Ede Brito</p>
+        <p class="instruction">Clique abaixo para iniciar</p>
+
+        <!-- Botão com direcionamento para a rota /painel -->
+        <a href="/painel" class="btn-iniciar">
+            🚀 Iniciar Sistema
+        </a>
     </div>
 
-    <!-- CONTEÚDO PRINCIPAL DO SISTEMA -->
-    <main class="main-content">
-        <h1>Painel de Controle Jurídico</h1>
-        <p>Bem-vindo ao sistema de controle e acompanhamento de processos.</p>
-    </main>
-
-    <!-- Script JS externo na pasta static -->
-    <script src="/static/js/splash.js"></script>
 </body>
 </html>
