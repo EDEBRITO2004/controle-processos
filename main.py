@@ -1,27 +1,41 @@
 # -*- coding: utf-8 -*-
-from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+import os
+from datetime import date
+from fastapi import FastAPI, Request, Form
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+import pg8000.native
+
+# Inicialização da aplicação
 app = FastAPI()
+
+# Configuração de arquivos estáticos e templates
+if not os.path.exists("static"):
+    os.makedirs("static", exist_ok=True)
+
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
-@app.get("/", response_class=HTMLResponse)
-async def read_root(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
-    
-import os
-from datetime import date
-from fastapi import FastAPI, Form
-from fastapi.responses import HTMLResponse, JSONResponse
-import pg8000.native
-
+# Configurações do Banco de Dados
 DB_USER = "controle_processos_lnju_user"
-DB_PASS = "J7I5L81oYnOyPcxRIO5FqBkx1RP0HQoX"
-DB_HOST = "dpg-dac0l9jtqb8s73dqjh00-a.virginia-postgres.render.com"
+DB_PASS = "J7I5L81oYnOyPcxRI05FqBkx1RPOHQoX"
+DB_HOST = "dpg-dac0l9jtqb8s73dqjh00-a.virginia-postgres.render.com"  # mantenha seu host completo aqui
 DB_NAME = "controle_processos_lnju"
 
+def get_db_connection():
+    return pg8000.native.Connection(
+        user=DB_USER,
+        password=DB_PASS,
+        host=DB_HOST,
+        database=DB_NAME
+    )
+
+# Rota principal para carregar o index.html com o splash screen
+@app.get("/", response_class=HTMLResponse)
+async def read_root(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request}
+                                      
 def get_db_connection():
     return pg8000.native.Connection(
         user=DB_USER,
