@@ -634,18 +634,16 @@ async def sistema():
         raw_hora = get_val(item, 'horario_compromisso', 'Horário')
         hora_fmt = ""
 
-  if raw_hora is not None:
-    # Se for um objeto datetime/time com hora e minuto
-    if hasattr(raw_hora, 'strftime'):
-        hora_fmt = raw_hora.strftime('%H:%M')
-    else:
-        # Se for string, extrai os dígitos ou pega do final (HH:MM)
-        txt = str(raw_hora).strip()
-        if ' ' in txt:
-            txt = txt.split()[-1]  # Pega apenas a parte do horário "HH:MM:SS"
-        if ':' in txt:
-            partes = txt.split(':')
-            hora_fmt = f"{partes[0].zfill(2)}:{partes[1].zfill(2)}"
+        if raw_hora is not None:
+            if hasattr(raw_hora, 'strftime'):
+                hora_fmt = raw_hora.strftime('%H:%M')
+            else:
+                txt = str(raw_hora).strip()
+                if ' ' in txt:
+                    txt = txt.split()[-1]
+                if ':' in txt:
+                    partes = txt.split(':')
+                    hora_fmt = f"{partes[0].zfill(2)}:{partes[1].zfill(2)}"
 
         data_fmt = formatar_data(get_val(item, 'Data'))
         data_hora_exibicao = f"{data_fmt} - {hora_fmt}" if hora_fmt else data_fmt
@@ -675,7 +673,9 @@ async def sistema():
             '</details>'
             '</div>'
         )
-    if not agenda: agenda_html = "<p style='padding:15px;'>Nenhum registro pendente na Agenda.</p>"
+
+    if not agenda: 
+        agenda_html = "<p style='padding:15px;'>Nenhum registro pendente na Agenda.</p>"
 
     # Montagem Prazos
     prazos_html = ""
