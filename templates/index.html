@@ -25,37 +25,38 @@
         }
 
         .container {
-            max-width: 600px;
+            max-width: 500px;
             width: 100%;
             display: flex;
             flex-direction: column;
             align-items: center;
         }
 
-        .logo-scale {
-            width: 140px;
-            height: auto;
-            margin-bottom: 25px;
-            filter: drop-shadow(0px 4px 8px rgba(0, 0, 0, 0.3));
+        /* SVG desenhado com base no Canvas Jetpack Compose */
+        .balanca-svg {
+            width: 180px;
+            height: 180px;
+            margin-bottom: 20px;
+            filter: drop-shadow(0px 4px 10px rgba(0,0,0,0.4));
         }
 
         h1 {
             font-size: 2.2rem;
             font-weight: 700;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             color: #ffffff;
         }
 
         .subtitle {
             font-size: 1.1rem;
             color: #dcdcdc;
-            margin-bottom: 5px;
+            margin-bottom: 6px;
         }
 
         .instruction {
-            font-size: 1rem;
+            font-size: 0.95rem;
             color: #b0c4de;
-            margin-bottom: 30px;
+            margin-bottom: 28px;
         }
 
         .btn-iniciar {
@@ -63,7 +64,7 @@
             color: #0d233a;
             font-size: 1.25rem;
             font-weight: bold;
-            padding: 16px 38px;
+            padding: 16px 40px;
             border: none;
             border-radius: 50px;
             cursor: pointer;
@@ -72,14 +73,14 @@
             align-items: center;
             justify-content: center;
             gap: 10px;
-            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
             transition: all 0.3s ease;
         }
 
         .btn-iniciar:hover {
             background-color: #e6b800;
             transform: translateY(-3px);
-            box-shadow: 0 8px 22px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45);
         }
 
         .btn-iniciar:active {
@@ -90,20 +91,33 @@
 <body>
 
     <div class="container">
-        <!-- Ícone da Balança da Justiça -->
-        <svg class="logo-scale" viewBox="0 0 24 24" fill="#ffcc00" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2C11.4477 2 11 2.44772 11 3V4.06186C7.05367 4.51527 4 7.90793 4 12C4 12.5523 4.44772 13 5 13C5.55228 13 6 12.5523 6 12C6 8.68629 8.68629 6 12 6C15.3137 6 18 8.68629 18 12C18 12.5523 18.4477 13 19 13C19.5523 13 20 12.5523 20 12C20 7.90793 16.9463 4.51527 13 4.06186V3C13 2.44772 12.5523 2 12 2Z"/>
-            <path d="M11 21V15H13V21H11Z"/>
-            <path d="M7 22H17V20H7V22Z"/>
-            <path d="M2 10L6 17H2L2 10Z"/>
-            <path d="M22 10L18 17H22L22 10Z"/>
+        <!-- Balança da Justiça baseada nas coordenadas do Jetpack Compose -->
+        <svg class="balanca-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <!-- Haste Vertical (drawLines: w/2, h*0.06 ate w/2, h*0.82) -->
+            <line x1="50" y1="6" x2="50" y2="82" stroke="#ffcc00" stroke-width="3.5" stroke-linecap="round"/>
+
+            <!-- Esfera do Topo (drawCircle: r=w*0.045, center=50, 6) -->
+            <circle cx="50" cy="6" r="4.5" fill="#ffcc00"/>
+
+            <!-- Travessão Horizontal (drawLine: 12 ate 88 em y=22) -->
+            <line x1="12" y1="22" x2="88" y2="22" stroke="#ffcc00" stroke-width="3.5" stroke-linecap="round"/>
+
+            <!-- Prato Esquerdo: Cabo (12,22 ate 12,42) e Arco Semi-circular -->
+            <line x1="12" y1="22" x2="12" y2="42" stroke="#ffcc00" stroke-width="2.1" stroke-linecap="round"/>
+            <path d="M 1 42 A 11 16 0 0 0 23 42" fill="none" stroke="#ffcc00" stroke-width="2.1" stroke-linecap="round"/>
+
+            <!-- Prato Direito: Cabo (88,22 ate 88,42) e Arco Semi-circular -->
+            <line x1="88" y1="22" x2="88" y2="42" stroke="#ffcc00" stroke-width="2.1" stroke-linecap="round"/>
+            <path d="M 77 42 A 11 16 0 0 0 99 42" fill="none" stroke="#ffcc00" stroke-width="2.1" stroke-linecap="round"/>
+
+            <!-- Base Trapezoidal (Path: 42,82 -> 58,82 -> 72,95 -> 28,95) -->
+            <polygon points="42,82 58,82 72,95 28,95" fill="#ffcc00"/>
         </svg>
 
         <h1>Controle Jurídico</h1>
         <p class="subtitle">Por Ede Brito</p>
         <p class="instruction">Clique abaixo para iniciar</p>
 
-        <!-- Botão com direcionamento para a rota /painel -->
         <a href="/painel" class="btn-iniciar">
             🚀 Iniciar Sistema
         </a>
