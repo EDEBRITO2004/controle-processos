@@ -3,7 +3,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-
+app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
@@ -16,8 +16,6 @@ from datetime import date
 from fastapi import FastAPI, Form
 from fastapi.responses import HTMLResponse, JSONResponse
 import pg8000.native
-
-app = FastAPI()
 
 DB_USER = "controle_processos_lnju_user"
 DB_PASS = "J7I5L81oYnOyPcxRIO5FqBkx1RP0HQoX"
