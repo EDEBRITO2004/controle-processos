@@ -9,7 +9,7 @@ from psycopg2.extras import RealDictCursor
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-app = FastAPI(title="PJe Publicações - Ede Brito")
+app = FastAPI(title="Controle jurídico - Ede Brito")
 
 # ------------------------------------------------------------------
 # CONFIGURAÇÕES DO BANCO DE DADOS E E-MAIL
