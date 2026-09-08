@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Balança de Justiça - Ícone</title>
+  <style>
+    body {
+      background: linear-gradient(180deg, #0d47a1 0%, #1976d2 100%);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    /* Contêiner Principal da Balança */
+    .balanca {
+      position: relative;
+      width: 160px;
+      height: 140px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Haste Central Vertical */
+    .haste-vertical {
+      width: 6px;
+      height: 100px;
+      background-color: #fbc02d;
+      position: absolute;
+      top: 15px;
+    }
+
+    /* Esfera no Topo */
+    .topo {
+      width: 14px;
+      height: 14px;
+      background-color: #fbc02d;
+      border-radius: 50%;
+      position: absolute;
+      top: 5px;
+    }
+
+    /* Travessão Horizontal */
+    .haste-horizontal {
+      width: 140px;
+      height: 5px;
+      background-color: #fbc02d;
+      position: absolute;
+      top: 25px;
+      border-radius: 2px;
+    }
+
+    /* Pratos da Balança (Semicírculos) */
+    .prato {
+      width: 40px;
+      height: 20px;
+      border: 4px solid #fbc02d;
+      border-top: none;
+      border-bottom-left-radius: 25px;
+      border-bottom-right-radius: 25px;
+      position: absolute;
+      top: 55px;
+    }
+
+    .prato.esquerdo {
+      left: 0px;
+    }
+
+    .prato.direito {
+      right: 0px;
+    }
+
+    /* Base Trapezoidal */
+    .base {
+      width: 0;
+      height: 0;
+      border-left: 25px solid transparent;
+      border-right: 25px solid transparent;
+      border-bottom: 20px solid #fbc02d;
+      position: absolute;
+      bottom: 0;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="balanca">
+    <div class="topo"></div>
+    <div class="haste-horizontal"></div>
+    <div class="haste-vertical"></div>
+    <div class="prato esquerdo"></div>
+    <div class="prato direito"></div>
+    <div class="base"></div>
+  </div>
+
+</body>
+</html>
