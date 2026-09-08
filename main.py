@@ -61,6 +61,61 @@ def get_val(row, *keys):
     return None
 
 # ------------------------------------------------------------------
+# TEMPLATE DA TELA DE ABERTURA (SPLASH)
+# ------------------------------------------------------------------
+SPLASH_TEMPLATE = """<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle Jurídico</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        html, body { height: 100%; }
+        body {
+            background: linear-gradient(180deg, #0d233a 0%, #1e6fd9 45%, #1e88e5 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+        .icon { width: 110px; height: 110px; margin-bottom: 24px; }
+        h1 { font-size: 1.8rem; font-weight: bold; margin-bottom: 6px; }
+        .subtitulo { font-size: 1rem; color: #ffcc00; font-style: italic; margin-bottom: 40px; }
+        .btn-acesso {
+            background-color: #ffcc00;
+            color: #0d233a;
+            font-weight: bold;
+            font-size: 1.05rem;
+            padding: 16px 40px;
+            border-radius: 30px;
+            text-decoration: none;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+            display: inline-block;
+        }
+        .btn-acesso:active { transform: scale(0.98); }
+    </style>
+</head>
+<body>
+    <svg class="icon" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="50" cy="12" r="4" fill="#ffcc00"/>
+        <line x1="50" y1="12" x2="50" y2="78" stroke="#ffcc00" stroke-width="4"/>
+        <line x1="20" y1="22" x2="80" y2="22" stroke="#ffcc00" stroke-width="4"/>
+        <path d="M20 22 L10 45 Q20 55 30 45 Z" stroke="#ffcc00" stroke-width="3" fill="none"/>
+        <path d="M80 22 L70 45 Q80 55 90 45 Z" stroke="#ffcc00" stroke-width="3" fill="none"/>
+        <polygon points="35,90 65,90 50,78" fill="#ffcc00"/>
+    </svg>
+    <h1>Controle Jurídico</h1>
+    <div class="subtitulo">por Ede Brito</div>
+    <a href="/painel" class="btn-acesso">Acesso ao sistema</a>
+</body>
+</html>"""
+
+# ------------------------------------------------------------------
 # TEMPLATE DA TELA DO PAINEL DASHBOARD
 # ------------------------------------------------------------------
 PAINEL_TEMPLATE = """<!DOCTYPE html>
@@ -476,9 +531,15 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 </html>"""
 
 # ------------------------------------------------------------------
-# ROTA 1: DASHBOARD
+# ROTA 0: TELA DE ABERTURA (SPLASH)
 # ------------------------------------------------------------------
 @app.get("/", response_class=HTMLResponse)
+async def splash():
+    return HTMLResponse(content=SPLASH_TEMPLATE)
+
+# ------------------------------------------------------------------
+# ROTA 1: DASHBOARD
+# ------------------------------------------------------------------
 @app.get("/painel", response_class=HTMLResponse)
 async def painel():
     cnt_prazos, cnt_audiencias, cnt_processos, cnt_clientes = 0, 0, 0, 0
