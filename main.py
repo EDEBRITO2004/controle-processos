@@ -35,16 +35,6 @@ def fetch_all_dict(conn, query):
 
 def formatar_data(raw_data):
     if not raw_data:
-        return 'N/A'
-    if hasattr(raw_data, 'strftime'):
-        dt_obj = raw_data
-        if dt_obj.year < 2000:
-            try:
-                ano_corrigido = int(str(dt_obj.year).zfill(4)[-2:]) + 2000
-                dt_obj = dt_obj.replace(year=ano_corrigido)
-            except Exception:
-                pass
-        return dt_obj.strftime('%d/%m/%Y')
     try:
         parts = str(raw_data).split()[0].split('-')
         ano = int(parts[0])
@@ -73,7 +63,7 @@ SPLASH_TEMPLATE = """<!DOCTYPE html>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         html, body { height: 100%; }
         body {
-            background: linear-gradient(180deg, #0d233a 0%, #1e6fd9 45%, #1e88e5 100%);
+            background: linear-gradient(180deg, #0d47a1 0%, #1976d2 100%);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -83,7 +73,45 @@ SPLASH_TEMPLATE = """<!DOCTYPE html>
             text-align: center;
             padding: 20px;
         }
-        .icon { width: 110px; height: 110px; margin-bottom: 24px; }
+
+        }
+
+        /* Travessão Horizontal */
+        .haste-horizontal {
+            width: 140px;
+            height: 5px;
+            background-color: #fbc02d;
+            position: absolute;
+            top: 25px;
+            border-radius: 2px;
+        }
+
+        /* Pratos da Balança (Semicírculos) */
+        .prato {
+            width: 40px;
+            height: 20px;
+            border: 4px solid #fbc02d;
+            border-top: none;
+            border-bottom-left-radius: 25px;
+            border-bottom-right-radius: 25px;
+            position: absolute;
+            top: 55px;
+        }
+
+        .prato.esquerdo { left: 0px; }
+        .prato.direito { right: 0px; }
+
+        /* Base Trapezoidal */
+        .base {
+            width: 0;
+            height: 0;
+            border-left: 25px solid transparent;
+            border-right: 25px solid transparent;
+            border-bottom: 20px solid #fbc02d;
+            position: absolute;
+            bottom: 0;
+        }
+
         h1 { font-size: 1.8rem; font-weight: bold; margin-bottom: 6px; }
         .subtitulo { font-size: 1rem; color: #ffcc00; font-style: italic; margin-bottom: 40px; }
         .btn-acesso {
@@ -101,14 +129,14 @@ SPLASH_TEMPLATE = """<!DOCTYPE html>
     </style>
 </head>
 <body>
-    <svg class="icon" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="50" cy="12" r="4" fill="#ffcc00"/>
-        <line x1="50" y1="12" x2="50" y2="78" stroke="#ffcc00" stroke-width="4"/>
-        <line x1="20" y1="22" x2="80" y2="22" stroke="#ffcc00" stroke-width="4"/>
-        <path d="M20 22 L10 45 Q20 55 30 45 Z" stroke="#ffcc00" stroke-width="3" fill="none"/>
-        <path d="M80 22 L70 45 Q80 55 90 45 Z" stroke="#ffcc00" stroke-width="3" fill="none"/>
-        <polygon points="35,90 65,90 50,78" fill="#ffcc00"/>
-    </svg>
+    <div class="balanca">
+        <div class="topo"></div>
+        <div class="haste-horizontal"></div>
+        <div class="haste-vertical"></div>
+        <div class="prato esquerdo"></div>
+        <div class="prato direito"></div>
+        <div class="base"></div>
+    </div>
     <h1>Controle Jurídico</h1>
     <div class="subtitulo">por Ede Brito</div>
     <a href="/painel" class="btn-acesso">Acesso ao sistema</a>
@@ -280,35 +308,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
        .btn-sub-filter.active {
             background-color: var(--blue-primary);
             color: white;
-            border-color: var(--blue-primary);
-        }
-
-       .card {
-            background: white;
-            border-radius: 10px;
-            padding: 14px;
-            margin-bottom: 10px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-            border-left: 4px solid var(--blue-primary);
-        }
-       .card.card-prazo { border-left-color: var(--red-deadline); }
-       .card h3 { margin: 0 0 6px 0; color: var(--blue-dark); font-size: 1rem; }
-       .card.card-prazo h3 { color: var(--red-deadline); }
-       .card p { margin: 3px 0; color: #495057; font-size: 0.9rem; }
-
-       .obs-form {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            margin-top: 4px;
-        }
-       .obs-form textarea {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ced4da;
-            border-radius: 6px;
-            font-size: 0.88rem;
-            box-sizing: border-box;
             resize: none;
             overflow-y: hidden;
             min-height: 50px;
@@ -372,8 +371,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             color: #fff;
             text-align: center;
             border-radius: 8px;
-            padding: 12px;
-            position: fixed;
             z-index: 1000;
             left: 50%;
             top: 20px;
@@ -412,20 +409,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         </div>
         <div id="agenda" class="section">{{AGENDA_HTML}}</div>
         <div id="processos" class="section">{{PROCESSOS_HTML}}</div>
-        <div id="clientes" class="section">{{CLIENTES_HTML}}</div>
-    </div>
-
-    <script>
-        function showTab(tabId) {
-            document.querySelectorAll('.section').forEach(function (sec) {
-                sec.classList.remove('active');
-            });
-            var target = document.getElementById(tabId);
-            if (target) target.classList.add('active');
-        }
-
-        function autoAjustarTextarea(textarea) {
-            textarea.style.height = 'auto';
             textarea.style.height = textarea.scrollHeight + 'px';
         }
 
@@ -491,7 +474,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 }
             });
 
-            document.querySelectorAll('#prazos-list .empty-msg').forEach(function (msg) {
                 msg.style.display = 'none';
             });
             if (visiveis === 0) {
@@ -622,290 +604,6 @@ async def sistema():
                 LEFT JOIN "Sistemas" s ON p."Sistema" = s."Código"
                 ORDER BY p."Código" DESC;
             """
-            processos = fetch_all_dict(conn, q_proc)
-        except Exception as e:
-            erro_db += f"Processos: {e}; "
-
-        try:
-            q_ag = """
-                SELECT
-                    a.*,
-                    a."Código" AS codigo_agenda,
-                    a."Horário" AS horario_compromisso,
-                    a."Observações" AS observacoes_agenda,
-                    p."Processo" AS numero_processo,
-                    c."Nomecli" AS cliente_nome,
-                    c."Empresa" AS cliente_empresa
-                FROM "Agenda" a
-                LEFT JOIN "Processos" p ON a."ProcessoNovoCod1" = p."ProcessoNovoCod1"
-                LEFT JOIN "Clientes" c ON p."CodCli" = c."CodCli"
-                WHERE a."Cumprido" IS NULL
-                   OR a."Cumprido" = FALSE
-                   OR CAST(a."Cumprido" AS TEXT) IN ('0', 'false', 'FALSE', 'f', 'F', 'no', 'NO')
-                ORDER BY a."Data" ASC, a."Horário" ASC;
-            """
-            agenda = fetch_all_dict(conn, q_ag)
-        except Exception as e:
-            erro_db += f"Agenda: {e}; "
-
-        try:
-            q_pub = """
-                SELECT
-                    pub.*,
-                    p."ProcessoNovoCod1" AS proc_cod_vinculado,
-                    p."Processo" AS numero_processo,
-                    c."Nomecli" AS cliente_nome,
-                    c."Empresa" AS cliente_empresa
-                FROM "Publicações" pub
-                LEFT JOIN "Processos" p
-                    ON TRIM(UPPER(pub."ProcessoNovoCod1")) = TRIM(UPPER(p."ProcessoNovoCod1"))
-                LEFT JOIN "Clientes" c ON p."CodCli" = c."CodCli"
-                ORDER BY "DataCumprimento" ASC;
-            """
-            prazos = fetch_all_dict(conn, q_pub)
-        except Exception as e:
-            erro_db += f"Publicações: {e}; "
-
-    except Exception as err:
-        erro_db = f"Erro Conexao: {err}"
-    finally:
-        if conn:
-            try: conn.close()
-            except Exception: pass
-
-    processos_por_cliente = {}
-    for proc in processos:
-        cod_cli = proc.get('CodCli')
-        if cod_cli:
-            if cod_cli not in processos_por_cliente:
-                processos_por_cliente[cod_cli] = []
-            processos_por_cliente[cod_cli].append(proc)
-
-    # Montagem Agenda
-    agenda_html = ""
-    for item in agenda:
-        item_id = get_val(item, 'codigo_agenda', 'Código', 'id')
-        tipo = get_val(item, 'Tipo') or 'Compromisso'
-        desc = get_val(item, 'Tarefa') or 'Sem descrição'
-        obs = get_val(item, 'observacoes_agenda', 'Observações') or ''
-        cod_novo = get_val(item, 'ProcessoNovoCod1') or ''
-        num_proc = get_val(item, 'numero_processo', 'Processo') or ''
-        cliente = get_val(item, 'cliente_nome', 'cliente_empresa', 'NomeCli') or 'Não informado'
-
-        raw_hora = get_val(item, 'horario_compromisso', 'Horário')
-        hora_fmt = ""
-
-        if raw_hora is not None:
-            if hasattr(raw_hora, 'strftime'):
-                hora_fmt = raw_hora.strftime('%H:%M')
-            else:
-                txt = str(raw_hora).strip()
-                if ' ' in txt:
-                    txt = txt.split()[-1]
-                if ':' in txt:
-                    partes = txt.split(':')
-                    hora_fmt = f"{partes[0].zfill(2)}:{partes[1].zfill(2)}"
-
-        data_fmt = formatar_data(get_val(item, 'Data'))
-        data_hora_exibicao = f"{data_fmt} - {hora_fmt}" if hora_fmt else data_fmt
-
-        identificacao_proc = cod_novo
-        if num_proc and num_proc != cod_novo:
-            identificacao_proc += f" ({num_proc})" if cod_novo else num_proc
-
-        proc_line = f"<p><strong>Processo:</strong> {identificacao_proc}</p>" if identificacao_proc else ""
-        titulo_obs = "▶ Ver/Editar observação" if obs and obs.strip() else "▶ Adicionar observação"
-
-        agenda_html += (
-            '<div class="card">'
-            f'<h3>📆 {tipo}</h3>'
-            f'<p><strong>Data:</strong> {data_hora_exibicao}</p>'
-            f'{proc_line}'
-            f'<p><strong>Cliente:</strong> {cliente}</p>'
-            f'<p><strong>Descrição:</strong> {desc}</p>'
-            '<details class="pub-details" onclick="setTimeout(initAutoResize, 50)">'
-            f'<summary>{titulo_obs}</summary>'
-            '<div class="pub-content">'
-            f'<form class="obs-form" onsubmit="salvarObservacao(event, this, {item_id})">'
-            f'<textarea name="observacoes" class="auto-resize" placeholder="Digite aqui as observações...">{obs}</textarea>'
-            '<button type="submit">💾 Salvar Observação</button>'
-            '</form>'
-            '</div>'
-            '</details>'
-            '</div>'
-        )
-
-    if not agenda: 
-        agenda_html = "<p style='padding:15px;'>Nenhum registro pendente na Agenda.</p>"
-
-    # Montagem Prazos
-    prazos_html = ""
-    counts = {"vencidos": 0, "vencendo": 0, "a_vencer": 0}
-
-    for prazo in prazos:
-        cumprido_flag = get_val(prazo, 'Cumprido')
-        if cumprido_flag in [True, 1, '1', 'true', 'TRUE', 't', 'T', 'yes', 'YES']:
-            continue
-
-        cod_novo = get_val(prazo, 'ProcessoNovoCod1', 'proc_cod_vinculado') or ''
-        num_proc = get_val(prazo, 'numero_processo', 'Processo') or ''
-        cliente = get_val(prazo, 'cliente_nome', 'cliente_empresa') or 'Não informado'
-
-        dt_ref_raw = get_val(prazo, 'DataCumprimento')
-        data_cumprimento_fmt = formatar_data(dt_ref_raw)
-        data_publicacao_fmt = formatar_data(get_val(prazo, 'Data'))
-
-        manifestacao = get_val(prazo, 'Manifestação') or 'Não informada'
-        publicacao = get_val(prazo, 'Publicação', 'Observações') or 'Sem texto de publicação'
-
-        dt_ref_obj = None
-        if dt_ref_raw:
-            if hasattr(dt_ref_raw, 'date'): dt_ref_obj = dt_ref_raw.date()
-            elif isinstance(dt_ref_raw, date): dt_ref_obj = dt_ref_raw
-
-        categoria_prazo = "a_vencer"
-        if dt_ref_obj:
-            if dt_ref_obj < hoje: categoria_prazo = "vencidos"
-            elif dt_ref_obj == hoje: categoria_prazo = "vencendo"
-            else: categoria_prazo = "a_vencer"
-
-        counts[categoria_prazo] += 1
-
-        identificacao_proc = cod_novo
-        if num_proc and num_proc != cod_novo:
-            identificacao_proc += f" ({num_proc})" if cod_novo else num_proc
-
-        proc_line = f"<p><strong>Processo:</strong> {identificacao_proc}</p>" if identificacao_proc else ""
-
-        prazos_html += (
-            f'<div class="card card-prazo item-prazo status-{categoria_prazo}">'
-            f'<h3>⏳ Data Cumprimento: {data_cumprimento_fmt}</h3>'
-            f'<p><strong>Publicado em:</strong> {data_publicacao_fmt}</p>'
-            f'{proc_line}'
-            f'<p><strong>Cliente:</strong> {cliente}</p>'
-            f'<p><strong>Manifestação:</strong> {manifestacao}</p>'
-            '<details class="pub-details">'
-            '<summary>▶ Ver publicação</summary>'
-            f'<div class="pub-content">{publicacao}</div>'
-            '</details>'
-            '</div>'
-        )
-
-    prazos_html += """
-    <div class="empty-msg msg-vencidos" style="display:none; padding:15px; color:#6c757d;">Nenhum prazo vencido.</div>
-    <div class="empty-msg msg-vencendo" style="display:none; padding:15px; color:#6c757d;">Nenhum prazo vencendo hoje.</div>
-    <div class="empty-msg msg-a_vencer" style="display:none; padding:15px; color:#6c757d;">Nenhum prazo futuro a vencer.</div>
-    """
-
-    # Montagem Processos
-    processos_html = """
-    <div class="search-box">
-        <input type="text" id="search-processos" placeholder="🔍 Buscar processo, cliente, ação..." onkeyup="filtrarProcessos()">
-    </div>
-    <div id="lista-processos">
-    """
-    for proc in processos:
-        cod_novo = get_val(proc, 'ProcessoNovoCod1') or 'Sem Cód. Novo'
-        num_proc = get_val(proc, 'Processo') or ''
-        cliente = get_val(proc, 'cliente_nome', 'cliente_empresa') or 'Não informado'
-        parte_contraria = get_val(proc, 'parte_contraria') or 'Não informada'
-        acao = get_val(proc, 'acao_nome') or 'Não informada'
-        vara = get_val(proc, 'Vara') or 'Não informada'
-
-        sistema_nome = get_val(proc, 'sistema_nome') or ''
-        sistema_link = get_val(proc, 'sistema_link') or ''
-
-        if sistema_link and str(sistema_link).strip():
-            url = str(sistema_link).strip()
-            if not url.startswith(('http://', 'https://')): url = 'https://' + url
-            btn_link_html = f'''
-            <a href="{url}" target="_blank" style="display:inline-block; margin-top:8px; padding:6px 12px; background-color:#0d6efd; color:white; text-decoration:none; border-radius:6px; font-size:0.85rem; font-weight:bold;">
-                🔗 Acessar {sistema_nome or "Sistema"}
-            </a>
-            '''
-        else:
-            btn_link_html = '''
-            <button onclick="alert('Nenhum link cadastrado para este sistema.')" style="margin-top:8px; padding:6px 12px; background-color:#6c757d; color:white; border:none; border-radius:6px; font-size:0.85rem; cursor:pointer;">
-                🔗 Sem link cadastrado
-            </button>
-            '''
-
-        texto_busca = f"{cod_novo} {num_proc} {cliente} {parte_contraria} {acao} {vara} {sistema_nome}".lower()
-        proc_num_line = f"<p><strong>Nº Processo:</strong> {num_proc}</p>" if num_proc else ""
-        sistema_line = f"<p><strong>Sistema:</strong> {sistema_nome}</p>" if sistema_nome else ""
-
-        processos_html += (
-            f'<div class="card card-item-processo" data-search="{texto_busca}">'
-            f'<h3>📁 {cod_novo}</h3>'
-            f'{proc_num_line}'
-            f'<p><strong>Cliente:</strong> {cliente}</p>'
-            f'<p><strong>Parte Contrária:</strong> {parte_contraria}</p>'
-            f'<p><strong>Ação:</strong> {acao}</p>'
-            f'<p><strong>Vara/Juízo:</strong> {vara}</p>'
-            f'{sistema_line}'
-            f'{btn_link_html}'
-            '</div>'
-        )
-    processos_html += "</div>"
-    if not processos: processos_html = "<p style='padding:15px;'>Nenhum processo encontrado.</p>"
-
-    # Montagem Clientes
-    clientes_html = """
-    <div class="search-box">
-        <input type="text" id="search-clientes" placeholder="🔍 Buscar por nome, CPF/CNPJ, cidade..." onkeyup="filtrarClientes()">
-    </div>
-    <div id="lista-clientes">
-    """
-    for cli in clientes:
-        cod_cli = get_val(cli, 'CodCli')
-        nome = get_val(cli, 'Nomecli', 'Empresa') or 'Sem Nome'
-        doc = get_val(cli, 'CPF_CNPJ') or 'N/A'
-        rg = get_val(cli, 'RG_IE') or 'N/A'
-        tel = get_val(cli, 'NúmeroTelefone') or 'N/A'
-
-        endereco_rua = get_val(cli, 'EndCli') or ''
-        cidade = get_val(cli, 'CidaCli') or ''
-        cep = get_val(cli, 'CEP') or ''
-
-        partes_end = [p for p in [endereco_rua, cidade, cep] if p]
-        endereco_completo = ", ".join(partes_end) if partes_end else "Não informado"
-
-        procs_cli = processos_por_cliente.get(cod_cli, [])
-        procs_html = ""
-        if procs_cli:
-            for p_item in procs_cli:
-                c_num = get_val(p_item, 'ProcessoNovoCod1') or 'Sem Cód.'
-                num_p = get_val(p_item, 'Processo') or ''
-                a_nome = get_val(p_item, 'acao_nome') or 'Ação N/I'
-
-                ident = c_num
-                if num_p and num_p != c_num: ident += f" ({num_p})"
-                procs_html += f"<li><strong>{ident}</strong> - {a_nome}</li>"
-            procs_html = f"<ul class='sub-proc-list'>{procs_html}</ul>"
-        else:
-            procs_html = "<p style='font-size:0.85rem; color:#6c757d; margin-top:4px;'>Nenhum processo vinculado.</p>"
-
-        texto_busca = f"{nome} {doc} {rg} {tel} {endereco_completo}".lower()
-
-        clientes_html += (
-            f'<div class="card card-item-cliente" data-search="{texto_busca}">'
-            '<details class="pub-details">'
-            '<summary style="cursor:pointer; outline:none;">'
-            f'<div style="font-size:1.05rem; font-weight:bold; color:var(--blue-dark); margin-bottom:4px;">👤 {nome}</div>'
-            f'<div style="font-size:0.88rem; color:#495057; font-weight:normal;"><strong>Documento:</strong> {doc}</div>'
-            f'<div style="font-size:0.88rem; color:#495057; font-weight:normal;"><strong>Telefone:</strong> {tel}</div>'
-            '</summary>'
-            '<div class="pub-content" style="margin-top:10px;">'
-            f'<p><strong>RG:</strong> {rg}</p>'
-            f'<p><strong>Endereço:</strong> {endereco_completo}</p>'
-            '<hr style="border:0; border-top:1px solid #e0e0e0; margin:8px 0;">'
-            '<p><strong>Processos Relacionados:</strong></p>'
-            f'{procs_html}'
-            '</div>'
-            '</details>'
-            '</div>'
-        )
-    clientes_html += "</div>"
     if not clientes: clientes_html = "<p style='padding:15px;'>Nenhum cliente encontrado.</p>"
 
     erro_banner = f'<div class="erro-banner">⚠️ Erro ao conectar no banco: {erro_db}</div>' if erro_db else ""
