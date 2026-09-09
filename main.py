@@ -271,7 +271,7 @@ PAINEL_TEMPLATE = """<!DOCTYPE html>
 </html>"""
 
 # ------------------------------------------------------------------
-# TEMPLATE DAS LISTAS (SEM O RODAPÉ DE ATALHOS)
+# TEMPLATE DAS LISTAS
 # ------------------------------------------------------------------
 HTML_TEMPLATE = """<!DOCTYPE html>
 <html lang="pt-BR">
@@ -511,6 +511,28 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             setTimeout(function(){ toast.className = toast.className.replace("show", ""); }, 3000);
         }
 
+        async function copiarENavegar(numero, url) {
+            if (numero && numero !== 'Sem Cód. Novo') {
+                try {
+                    await navigator.clipboard.writeText(numero);
+                    showToast("📋 Número " + numero + " copiado!");
+                } catch (err) {
+                    var textArea = document.createElement("textarea");
+                    textArea.value = numero;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand("copy");
+                    document.body.removeChild(textArea);
+                    showToast("📋 Número " + numero + " copiado!");
+                }
+            }
+            if (url && url !== '#' && url !== '') {
+                setTimeout(function() {
+                    window.open(url, '_blank');
+                }, 300);
+            }
+        }
+
         async function salvarObservacao(event, form, itemId) {
             event.preventDefault();
             var formData = new FormData(form);
@@ -592,29 +614,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             filtrarPrazos('a_vencer', document.querySelector('#prazos .btn-sub-filter.active'));
             initAutoResize();
         });
-        async function copiarENavegar(numero, url) {
-    if (numero && numero !== 'Sem Cód. Novo') {
-        try {
-            await navigator.clipboard.writeText(numero);
-            showToast("📋 Número " + numero + " copiado!");
-        } catch (err) {
-            // Fallback para celulares
-            var textArea = document.createElement("textarea");
-            textArea.value = numero;
-            document.body.appendChild(textArea);
-            textArea.select();
-            document.execCommand("copy");
-            document.body.removeChild(textArea);
-            showToast("📋 Número " + numero + " copiado!");
-        }
-    }
-    if (url && url !== '#' && url !== '') {
-        setTimeout(function() {
-            window.open(url, '_blank');
-        }, 300);
-    }
-}
-
     </script>
 </body>
 </html>"""
@@ -904,18 +903,22 @@ async def sistema():
         sistema_nome = get_val(proc, 'sistema_nome') or ''
         sistema_link = get_val(proc, 'sistema_link') or ''
 
+        num_copia = cod_novo if cod_novo != 'Sem Cód. Novo' else num_proc
+        num_copia_clean = str(num_copia).replace("'", "\\'")
+
         if sistema_link and str(sistema_link).strip():
             url = str(sistema_link).strip()
-            if not url.startswith(('http://', 'https://')): url = 'https://' + url
+            if not url.startswith(('http://', 'https://')): 
+                url = 'https://' + url
             btn_link_html = f'''
-            <a href="{url}" target="_blank" style="display:inline-block; margin-top:8px; padding:6px 12px; background-color:#0d6efd; color:white; text-decoration:none; border-radius:6px; font-size:0.85rem; font-weight:bold;">
-                🔗 Acessar {sistema_nome or "Sistema"}
-            </a>
+            <button type="button" onclick="copiarENavegar('{num_copia_clean}', '{url}')" style="display:inline-block; margin-top:8px; padding:8px 12px; background-color:#0d6efd; color:white; border:none; border-radius:6px; font-size:0.85rem; font-weight:bold; cursor:pointer;">
+                🔗 Copiar Nº e Acessar {sistema_nome or "Sistema"}
+            </button>
             '''
         else:
-            btn_link_html = '''
-            <button onclick="alert('Nenhum link cadastrado para este sistema.')" style="margin-top:8px; padding:6px 12px; background-color:#6c757d; color:white; border:none; border-radius:6px; font-size:0.85rem; cursor:pointer;">
-                🔗 Sem link cadastrado
+            btn_link_html = f'''
+            <button type="button" onclick="copiarENavegar('{num_copia_clean}', '#')" style="margin-top:8px; padding:8px 12px; background-color:#6c757d; color:white; border:none; border-radius:6px; font-size:0.85rem; cursor:pointer;">
+                📋 Copiar Nº (Sem link cadastrado)
             </button>
             '''
 
