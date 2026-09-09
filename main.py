@@ -592,6 +592,29 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             filtrarPrazos('a_vencer', document.querySelector('#prazos .btn-sub-filter.active'));
             initAutoResize();
         });
+        async function copiarENavegar(numero, url) {
+    if (numero && numero !== 'Sem Cód. Novo') {
+        try {
+            await navigator.clipboard.writeText(numero);
+            showToast("📋 Número " + numero + " copiado!");
+        } catch (err) {
+            // Fallback para celulares
+            var textArea = document.createElement("textarea");
+            textArea.value = numero;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand("copy");
+            document.body.removeChild(textArea);
+            showToast("📋 Número " + numero + " copiado!");
+        }
+    }
+    if (url && url !== '#' && url !== '') {
+        setTimeout(function() {
+            window.open(url, '_blank');
+        }, 300);
+    }
+}
+
     </script>
 </body>
 </html>"""
