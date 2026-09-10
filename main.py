@@ -1,33 +1,19 @@
 # -*- coding: utf-8 -*-
 import os
 import json
-import time
-import httpx
 from datetime import date, datetime, timedelta
 from fastapi import FastAPI, Form, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 import pg8000.native
+from curl_cffi import requests
 
 app = FastAPI(title="Controle de Processos")
 
-# ------------------------------------------------------------------
 # Configurações do Banco de Dados
-# CORREÇÃO: credenciais lidas de variáveis de ambiente, nunca hardcoded.
-# Configure-as no painel do Render em "Environment" (ou num arquivo .env
-# local que NÃO seja commitado no Git).
-# ------------------------------------------------------------------
-DB_USER = os.environ.get("DB_USER")
-DB_PASS = os.environ.get("DB_PASS")
-DB_HOST = os.environ.get("DB_HOST")
-DB_NAME = os.environ.get("DB_NAME")
-
-_REQUIRED_DB_VARS = {"DB_USER": DB_USER, "DB_PASS": DB_PASS, "DB_HOST": DB_HOST, "DB_NAME": DB_NAME}
-_missing = [k for k, v in _REQUIRED_DB_VARS.items() if not v]
-if _missing:
-    raise RuntimeError(
-        "Variáveis de ambiente do banco não configuradas: " + ", ".join(_missing) +
-        ". Defina-as no ambiente (painel do Render > Environment) antes de iniciar a aplicação."
-    )
+DB_USER = "controle_processos_lnju_user"
+DB_PASS = "J7I5L81oYnOyPcxRIO5FqBkx1RP0HQoX"
+DB_HOST = "dpg-dac0l9jtqb8s73dqjh00-a.virginia-postgres.render.com"
+DB_NAME = "controle_processos_lnju"
 
 def get_db_connection():
     return pg8000.native.Connection(
@@ -89,18 +75,18 @@ def calcular_prazo_5_dias_uteis(data_disp_str):
         dt_disp = datetime.strptime(data_disp_str, "%Y-%m-%d").date()
     except ValueError:
         dt_disp = datetime.now().date()
-
+        
     dt_pub = dt_disp + timedelta(days=1)
     while not eh_dia_util(dt_pub):
         dt_pub += timedelta(days=1)
-
+        
     dias = 0
     dt_limite = dt_pub
     while dias < 5:
         dt_limite += timedelta(days=1)
         if eh_dia_util(dt_limite):
             dias += 1
-
+            
     return dt_pub, dt_limite
 
 # ------------------------------------------------------------------
@@ -188,15 +174,15 @@ PAINEL_TEMPLATE = """<!DOCTYPE html>
                 <p>Prazos Pendentes</p>
             </div>
             <div class="stat-card audiencia">
-                <div class="stat-val">\U0001f4c6 {{TOTAL_AUDIENCIAS}}</div>
+                <div class="stat-val">📆 {{TOTAL_AUDIENCIAS}}</div>
                 <p>Audiências</p>
             </div>
             <div class="stat-card">
-                <div class="stat-val">\U0001f4c2 {{TOTAL_PROCESSOS}}</div>
+                <div class="stat-val">📂 {{TOTAL_PROCESSOS}}</div>
                 <p>Processos Ativos</p>
             </div>
             <div class="stat-card">
-                <div class="stat-val">\U0001f464 {{TOTAL_CLIENTES}}</div>
+                <div class="stat-val">👤 {{TOTAL_CLIENTES}}</div>
                 <p>Clientes Cadastrados</p>
             </div>
         </div>
@@ -209,15 +195,15 @@ PAINEL_TEMPLATE = """<!DOCTYPE html>
                 <span>➔</span>
             </a>
             <a href="/agenda" class="module-btn">
-                <span>\U0001f4c6 Agenda & Audiências</span>
+                <span>📆 Agenda & Audiências</span>
                 <span>➔</span>
             </a>
             <a href="/processos" class="module-btn">
-                <span>\U0001f4c2 Gestão de Processos</span>
+                <span>📂 Gestão de Processos</span>
                 <span>➔</span>
             </a>
             <a href="/clientes" class="module-btn">
-                <span>\U0001f464 Cadastro de Clientes</span>
+                <span>👤 Cadastro de Clientes</span>
                 <span>➔</span>
             </a>
         </div>
@@ -269,7 +255,7 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
 <body>
     <header>
         <span>{{TITULO_PAGINA}}</span>
-        <a href="/painel">\U0001f4ca Voltar ao Painel</a>
+        <a href="/painel">📊 Voltar ao Painel</a>
     </header>
 
     <div class="container">
@@ -415,7 +401,7 @@ async def pagina_prazos(aba: str = "a_vencer", msg: str = None, erro: str = None
     <div style="margin-bottom: 12px;">
         <form action="/prazos/sincronizar-djen" method="post">
             <button type="submit" style="width: 100%; padding: 12px; background-color: #198754; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 0.9rem; cursor: pointer;">
-                \U0001f504 Sincronizar Publicações DJEN (OAB 182981/SP)
+                🔄 Sincronizar Publicações DJEN (OAB 182981/SP)
             </button>
         </form>
     </div>
@@ -502,7 +488,7 @@ async def pagina_agenda(msg: str = None):
 
         cards_html += f"""
         <div class="card">
-            <h3>\U0001f4c6 {tipo}</h3>
+            <h3>📆 {tipo}</h3>
             <p><strong>Data:</strong> {data_hora_exibicao}</p>
             {proc_line}
             <p><strong>Cliente:</strong> {cliente}</p>
@@ -512,7 +498,7 @@ async def pagina_agenda(msg: str = None):
                 <div class="pub-content">
                     <form class="obs-form" action="/agenda/atualizar/{item_id}" method="post">
                         <textarea name="observacoes" placeholder="Digite aqui as observações...">{obs}</textarea>
-                        <button type="submit">\U0001f4be Salvar Observação</button>
+                        <button type="submit">💾 Salvar Observação</button>
                     </form>
                 </div>
             </details>
@@ -586,7 +572,7 @@ async def pagina_processos(q: str = ""):
         if sistema_link and str(sistema_link).strip():
             url = str(sistema_link).strip()
             if not url.startswith(('http://', 'https://')): url = 'https://' + url
-            btn_link_html = f'''<a href="{url}" target="_blank" style="display:inline-block; margin-top:8px; padding:8px 12px; background-color:#0d6efd; color:white; border-radius:6px; font-size:0.85rem; font-weight:bold; text-decoration:none;">\U0001f517 Acessar {sistema_nome or "Sistema"}</a>'''
+            btn_link_html = f'''<a href="{url}" target="_blank" style="display:inline-block; margin-top:8px; padding:8px 12px; background-color:#0d6efd; color:white; border-radius:6px; font-size:0.85rem; font-weight:bold; text-decoration:none;">🔗 Acessar {sistema_nome or "Sistema"}</a>'''
         else:
             btn_link_html = ''
 
@@ -595,7 +581,7 @@ async def pagina_processos(q: str = ""):
 
         cards_html += f"""
         <div class="card">
-            <h3>\U0001f4c1 {cod_novo}</h3>
+            <h3>📁 {cod_novo}</h3>
             {proc_num_line}
             <p><strong>Cliente:</strong> {cliente}</p>
             <p><strong>Parte Contrária:</strong> {parte_contraria}</p>
@@ -611,7 +597,7 @@ async def pagina_processos(q: str = ""):
 
     conteudo = f"""
     <form class="search-form" action="/processos" method="get">
-        <input type="text" name="q" value="{q}" placeholder="\U0001f50d Buscar por código, processo, cliente, vara...">
+        <input type="text" name="q" value="{q}" placeholder="🔍 Buscar por código, processo, cliente, vara...">
         <button type="submit">Buscar</button>
     </form>
     <div>
@@ -692,7 +678,7 @@ async def pagina_clientes(q: str = ""):
         <div class="card">
             <details class="pub-details">
                 <summary style="cursor:pointer; outline:none;">
-                    <div style="font-size:1.05rem; font-weight:bold; color:var(--blue-dark); margin-bottom:4px;">\U0001f464 {nome}</div>
+                    <div style="font-size:1.05rem; font-weight:bold; color:var(--blue-dark); margin-bottom:4px;">👤 {nome}</div>
                     <div style="font-size:0.88rem; color:#495057; font-weight:normal;"><strong>Documento:</strong> {doc}</div>
                     <div style="font-size:0.88rem; color:#495057; font-weight:normal;"><strong>Telefone:</strong> {tel}</div>
                 </summary>
@@ -712,7 +698,7 @@ async def pagina_clientes(q: str = ""):
 
     conteudo = f"""
     <form class="search-form" action="/clientes" method="get">
-        <input type="text" name="q" value="{q}" placeholder="\U0001f50d Buscar por nome, CPF/CNPJ, cidade...">
+        <input type="text" name="q" value="{q}" placeholder="🔍 Buscar por nome, CPF/CNPJ, cidade...">
         <button type="submit">Buscar</button>
     </form>
     <div>
@@ -746,90 +732,60 @@ async def atualizar_observacao_agenda(item_id: int, observacoes: str = Form(None
             try: conn.close()
             except Exception: pass
 
-# ------------------------------------------------------------------
-# CORREÇÃO: sincronização com o DJEN reescrita com httpx (HTTP/2),
-# headers completos de navegador, sessão com cookies "aquecida" via
-# visita prévia ao site público, e novas tentativas com backoff.
-#
-# IMPORTANTE: se mesmo assim o 403 persistir, o bloqueio muito
-# provavelmente é por faixa de IP (o Render é um datacenter e vários
-# provedores de nuvem são bloqueados por WAFs de tribunais,
-# independentemente dos headers enviados). Nesse caso as opções são:
-#   1) Rodar essa sincronização periodicamente a partir de uma máquina
-#      fora de datacenter (ex.: um agendador local, ou uma Cloud
-#      Function/VM que preserve IP residencial via proxy).
-#   2) Usar um serviço de proxy residencial configurável via a
-#      variável de ambiente DJEN_PROXY_URL (ex.: "http://user:pass@host:porta").
-# ------------------------------------------------------------------
-DJEN_PROXY_URL = os.environ.get("DJEN_PROXY_URL")  # opcional
-
-def _montar_cliente_http():
-    proxies = DJEN_PROXY_URL if DJEN_PROXY_URL else None
-    return httpx.Client(
-        http2=True,
-        timeout=20.0,
-        follow_redirects=True,
-        proxies=proxies,
-        headers={
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                          "(KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-            "Accept": "application/json, text/plain, */*",
-            "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
-            "Accept-Encoding": "gzip, deflate, br",
-            "Origin": "https://comunica.pje.jus.br",
-            "Referer": "https://comunica.pje.jus.br/",
-            "Sec-Fetch-Site": "same-site",
-            "Sec-Fetch-Mode": "cors",
-            "Sec-Fetch-Dest": "empty",
-            "Sec-Ch-Ua": '"Chromium";v="125", "Not.A/Brand";v="24", "Google Chrome";v="125"',
-            "Sec-Ch-Ua-Mobile": "?0",
-            "Sec-Ch-Ua-Platform": '"Windows"',
-        },
-    )
-
-def _consultar_djen_com_retry(url, tentativas=3, espera_base=2.0):
-    ultimo_erro = None
-    with _montar_cliente_http() as client:
-        # "Aquece" a sessão visitando a página pública antes de chamar a API,
-        # para receber cookies (ex.: __cf_bm) que o WAF costuma exigir.
-        try:
-            client.get("https://comunica.pje.jus.br/")
-        except Exception:
-            pass  # se falhar, tenta a chamada à API mesmo assim
-
-        for tentativa in range(1, tentativas + 1):
-            try:
-                resp = client.get(url)
-                if resp.status_code == 200:
-                    return resp.json(), None
-                if resp.status_code == 403:
-                    ultimo_erro = (
-                        "403 (bloqueado pelo servidor do DJEN). Provavelmente é bloqueio "
-                        "por IP de datacenter (Render) ou por proteção anti-bot — ver "
-                        "comentário no código sobre DJEN_PROXY_URL."
-                    )
-                else:
-                    ultimo_erro = f"HTTP {resp.status_code}: {resp.text[:200]}"
-            except httpx.HTTPError as e:
-                ultimo_erro = str(e)
-
-            if tentativa < tentativas:
-                time.sleep(espera_base * tentativa)
-
-    return None, ultimo_erro
-
 @app.post("/prazos/sincronizar-djen")
 def sincronizar_djen():
     oab = "182981"
     uf = "SP"
-    url = f"https://comunicaapi.pje.jus.br/api/v1/comunicacao?numeroOab={oab}&ufOab={uf}"
+    
+    # Define o intervalo de datas (Data de hoje para a busca)[span_2](start_span)[span_2](end_span)
+    hoje = date.today().strftime("%Y-%m-%d")
+    data_inicio = hoje
+    data_fim = hoje
 
-    payload, erro = _consultar_djen_com_retry(url)
-    if erro:
-        return RedirectResponse(url=f"/prazos?erro={erro.replace(' ', '+')}", status_code=303)
-
-    items = payload.get('items', [])
-
+    # URL ajustada com os parâmetros obrigatórios descobertos no aplicativo móvel do PJe[span_3](start_span)[span_3](end_span)
+    url = (
+        f"https://comunicaapi.pje.jus.br/api/v1/comunicacao"
+        f"?numeroOab={oab}"
+        f"&ufOab={uf}"
+        f"&dataDisponibilizacaoInicio={data_inicio}"
+        f"&dataDisponibilizacaoFim={data_fim}"
+        f"&pagina=1"
+        f"&itensPorPagina=100"
+    )
+    
+    headers = {
+        'Accept': 'application/json, text/plain, */*',
+        'Accept-Language': 'pt-BR,pt;q=0.9',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'Origin': 'https://comunica.pje.jus.br',
+        'Referer': 'https://comunica.pje.jus.br/',
+        'Sec-Fetch-Dest': 'empty',
+        'Sec-Fetch-Mode': 'cors',
+        'Sec-Fetch-Site': 'same-site',
+    }
+    
+    try:
+        # Usa curl_cffi simulando Chrome para evitar bloqueio TLS / HTTP 403
+        response = requests.get(
+            url, 
+            headers=headers, 
+            impersonate="chrome120", 
+            timeout=15
+        )
+        
+        if response.status_code == 403:
+            msg_erro = "Erro+403:+Acesso+negado+pelo+PJe.+A+API+bloqueou+a+requisição."
+            return RedirectResponse(url=f"/prazos?erro={msg_erro}", status_code=303)
+            
+        response.raise_for_status()
+        payload = response.json()
+        items = payload.get('items', [])
+        
+    except Exception as e:
+        msg_erro = f"Erro+ao+consultar+DJEN:+{str(e)}"
+        return RedirectResponse(url=f"/prazos?erro={msg_erro}", status_code=303)
+        
     novos_registros = 0
     duplicados = 0
 
