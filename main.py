@@ -35,57 +35,6 @@ def get_db_connection():
         password=DB_PASS,
         host=DB_HOST,
         database=DB_NAME,
-        ssl_context=True
-    )
-
-def fetch_all_dict(conn, query):
-    try:
-        res = conn.run(query)
-        if not res:
-            return []
-        cols = [col['name'] for col in conn.columns]
-        return [dict(zip(cols, row)) for row in res]
-    except Exception as e:
-        print(f"Erro na query: {query[:60]}... Erro: {e}")
-        return []
-
-def formatar_data(raw_data):
-    if not raw_data:
-        return 'N/A'
-    if hasattr(raw_data, 'strftime'):
-        dt_obj = raw_data
-        if dt_obj.year < 2000:
-            try:
-                ano_corrigido = int(str(dt_obj.year).zfill(4)[-2:]) + 2000
-                dt_obj = dt_obj.replace(year=ano_corrigido)
-            except Exception:
-                pass
-        return dt_obj.strftime('%d/%m/%Y')
-    try:
-        parts = str(raw_data).split()[0].split('-')
-        ano = int(parts[0])
-        if ano < 2000:
-            ano = int(str(ano).zfill(4)[-2:]) + 2000
-        return f"{parts[2]}/{parts[1]}/{ano}"
-    except Exception:
-        return str(raw_data)
-
-def get_val(row, *keys):
-    for k in keys:
-        if k in row and row[k] is not None:
-            return row[k]
-    return None
-
-def eh_dia_util(dt):
-    if dt.weekday() in (5, 6):
-        return False
-    feriados_fixos = [(1, 1), (21, 4), (1, 5), (7, 9), (12, 10), (2, 11), (15, 11), (20, 11), (25, 12)]
-    if (dt.day, dt.month) in feriados_fixos:
-        return False
-    return True
-
-def calcular_prazo_5_dias_uteis(data_disp_str):
-    try:
         dt_disp = datetime.strptime(data_disp_str, "%Y-%m-%d").date()
     except ValueError:
         dt_disp = datetime.now().date()
@@ -400,13 +349,6 @@ async def pagina_prazos(aba: str = "a_vencer", msg: str = None, erro: str = None
             <details class="pub-details">
                 <summary>▶ Ver publicação</summary>
                 <div class="pub-content">{publicacao}</div>
-            </details>
-        </div>
-        """
-
-    if not cards_html:
-        cards_html = f"<div style='padding:15px; color:#6c757d; background:white; border-radius:8px;'>Nenhum prazo nesta categoria ({aba.replace('_', ' ')}).</div>"
-
     active_v = "active" if aba == "vencidos" else ""
     active_vc = "active" if aba == "vencendo" else ""
     active_av = "active" if aba == "a_vencer" else ""
@@ -446,26 +388,6 @@ async def pagina_agenda(msg: str = None):
     try:
         conn = get_db_connection()
         q_ag = """
-            SELECT
-                a.*,
-                a."Código" AS codigo_agenda,
-                a."Horário" AS horario_compromisso,
-                a."Observações" AS observacoes_agenda,
-                p."Processo" AS numero_processo,
-                c."Nomecli" AS cliente_nome,
-                c."Empresa" AS cliente_empresa
-            FROM "Agenda" a
-            LEFT JOIN "Processos" p ON a."ProcessoNovoCod1" = p."ProcessoNovoCod1"
-            LEFT JOIN "Clientes" c ON p."CodCli" = c."CodCli"
-            WHERE a."Cumprido" IS NULL OR a."Cumprido" = FALSE
-            ORDER BY a."Data" ASC, a."Horário" ASC;
-        """
-        agenda = fetch_all_dict(conn, q_ag)
-    except Exception as e:
-        erro_db = str(e)
-    finally:
-        if conn:
-            try: conn.close()
             except Exception: pass
 
     cards_html = ""
@@ -505,32 +427,6 @@ async def pagina_agenda(msg: str = None):
             <h3>📆 {tipo}</h3>
             <p><strong>Data:</strong> {data_hora_exibicao}</p>
             {proc_line}
-            <p><strong>Cliente:</strong> {cliente}</p>
-            <p><strong>Descrição:</strong> {desc}</p>
-            <details class="pub-details">
-                <summary>{titulo_obs}</summary>
-                <div class="pub-content">
-                    <form class="obs-form" action="/agenda/atualizar/{item_id}" method="post">
-                        <textarea name="observacoes" placeholder="Digite aqui as observações...">{obs}</textarea>
-                        <button type="submit">💾 Salvar Observação</button>
-                    </form>
-                </div>
-            </details>
-        </div>
-        """
-
-    if not agenda:
-        cards_html = "<p style='padding:15px; background:white; border-radius:8px;'>Nenhum registro pendente na Agenda.</p>"
-
-    info_banner = f'<div class="info-banner">{msg}</div>' if msg else ""
-    erro_banner = f'<div class="erro-banner">⚠️ Erro no Banco: {erro_db}</div>' if erro_db else ""
-    html = PAGE_TEMPLATE.replace("{{TITULO_PAGINA}}", "Agenda & Audiências")\
-                        .replace("{{INFO_BANNER}}", info_banner)\
-                        .replace("{{ERRO_BANNER}}", erro_banner)\
-                        .replace("{{CONTEUDO_PAGINA}}", cards_html)
-    return HTMLResponse(content=html)
-
-# MÓDULO 3: PROCESSOS (Busca Nativa do Servidor)
 @app.get("/processos", response_class=HTMLResponse)
 async def pagina_processos(q: str = ""):
     processos = []
@@ -570,39 +466,6 @@ async def pagina_processos(q: str = ""):
     for proc in processos:
         cod_novo = get_val(proc, 'ProcessoNovoCod1') or 'Sem Cód. Novo'
         num_proc = get_val(proc, 'Processo') or ''
-        cliente = get_val(proc, 'cliente_nome', 'cliente_empresa') or 'Não informado'
-        parte_contraria = get_val(proc, 'parte_contraria') or 'Não informada'
-        acao = get_val(proc, 'acao_nome') or 'Não informada'
-        vara = get_val(proc, 'Vara') or 'Não informada'
-        sistema_nome = get_val(proc, 'sistema_nome') or ''
-        sistema_link = get_val(proc, 'sistema_link') or ''
-
-        texto_busca = f"{cod_novo} {num_proc} {cliente} {parte_contraria} {acao} {vara} {sistema_nome}".lower()
-        if termo_busca and termo_busca not in texto_busca:
-            continue
-
-        encontrados += 1
-
-        if sistema_link and str(sistema_link).strip():
-            url = str(sistema_link).strip()
-            if not url.startswith(('http://', 'https://')): url = 'https://' + url
-            btn_link_html = f'''<a href="{url}" target="_blank" style="display:inline-block; margin-top:8px; padding:8px 12px; background-color:#0d6efd; color:white; border-radius:6px; font-size:0.85rem; font-weight:bold; text-decoration:none;">🔗 Acessar {sistema_nome or "Sistema"}</a>'''
-        else:
-            btn_link_html = ''
-
-        proc_num_line = f"<p><strong>Nº Processo:</strong> {num_proc}</p>" if num_proc else ""
-        sistema_line = f"<p><strong>Sistema:</strong> {sistema_nome}</p>" if sistema_nome else ""
-
-        cards_html += f"""
-        <div class="card">
-            <h3>📁 {cod_novo}</h3>
-            {proc_num_line}
-            <p><strong>Cliente:</strong> {cliente}</p>
-            <p><strong>Parte Contrária:</strong> {parte_contraria}</p>
-            <p><strong>Ação:</strong> {acao}</p>
-            <p><strong>Vara/Juízo:</strong> {vara}</p>
-            {sistema_line}
-            {btn_link_html}
         </div>
         """
 
@@ -642,81 +505,6 @@ async def pagina_clientes(q: str = ""):
         erro_db = str(e)
     finally:
         if conn:
-            try: conn.close()
-            except Exception: pass
-
-    processos_por_cliente = {}
-    for proc in processos:
-        cod_cli = proc.get('CodCli')
-        if cod_cli:
-            if cod_cli not in processos_por_cliente:
-                processos_por_cliente[cod_cli] = []
-            processos_por_cliente[cod_cli].append(proc)
-
-    cards_html = ""
-    encontrados = 0
-    for cli in clientes:
-        cod_cli = get_val(cli, 'CodCli')
-        nome = get_val(cli, 'Nomecli', 'Empresa') or 'Sem Nome'
-        doc = get_val(cli, 'CPF_CNPJ') or 'N/A'
-        rg = get_val(cli, 'RG_IE') or 'N/A'
-        tel = get_val(cli, 'NúmeroTelefone') or 'N/A'
-
-        endereco_rua = get_val(cli, 'EndCli') or ''
-        cidade = get_val(cli, 'CidaCli') or ''
-        cep = get_val(cli, 'CEP') or ''
-
-        partes_end = [p for p in [endereco_rua, cidade, cep] if p]
-        endereco_completo = ", ".join(partes_end) if partes_end else "Não informado"
-
-        texto_busca = f"{nome} {doc} {rg} {tel} {endereco_completo}".lower()
-        if termo_busca and termo_busca not in texto_busca:
-            continue
-
-        encontrados += 1
-
-        procs_cli = processos_por_cliente.get(cod_cli, [])
-        procs_html = ""
-        if procs_cli:
-            for p_item in procs_cli:
-                c_num = get_val(p_item, 'ProcessoNovoCod1') or 'Sem Cód.'
-                num_p = get_val(p_item, 'Processo') or ''
-                ident = c_num
-                if num_p and num_p != c_num: ident += f" ({num_p})"
-                procs_html += f"<li><strong>{ident}</strong></li>"
-            procs_html = f"<ul class='sub-proc-list'>{procs_html}</ul>"
-        else:
-            procs_html = "<p style='font-size:0.85rem; color:#6c757d; margin-top:4px;'>Nenhum processo vinculado.</p>"
-
-        cards_html += f"""
-        <div class="card">
-            <details class="pub-details">
-                <summary style="cursor:pointer; outline:none;">
-                    <div style="font-size:1.05rem; font-weight:bold; color:var(--blue-dark); margin-bottom:4px;">👤 {nome}</div>
-                    <div style="font-size:0.88rem; color:#495057; font-weight:normal;"><strong>Documento:</strong> {doc}</div>
-                    <div style="font-size:0.88rem; color:#495057; font-weight:normal;"><strong>Telefone:</strong> {tel}</div>
-                </summary>
-                <div class="pub-content" style="margin-top:10px;">
-                    <p><strong>RG:</strong> {rg}</p>
-                    <p><strong>Endereço:</strong> {endereco_completo}</p>
-                    <hr style="border:0; border-top:1px solid #e0e0e0; margin:8px 0;">
-                    <p><strong>Processos Relacionados:</strong></p>
-                    {procs_html}
-                </div>
-            </details>
-        </div>
-        """
-
-    if encontrados == 0:
-        cards_html = "<p style='padding:15px; background:white; border-radius:8px;'>Nenhum cliente encontrado.</p>"
-
-    conteudo = f"""
-    <form class="search-form" action="/clientes" method="get">
-        <input type="text" name="q" value="{q}" placeholder="🔍 Buscar por nome, CPF/CNPJ, cidade...">
-        <button type="submit">Buscar</button>
-    </form>
-    <div>
-        {cards_html}
     </div>
     """
 
@@ -756,81 +544,6 @@ async def atualizar_observacao_agenda(item_id: int, observacoes: str = Form(None
 # provedores de nuvem são bloqueados por WAFs de tribunais,
 # independentemente dos headers enviados). Nesse caso as opções são:
 #   1) Rodar essa sincronização periodicamente a partir de uma máquina
-#      fora de datacenter (ex.: um agendador local, ou uma Cloud
-#      Function/VM que preserve IP residencial via proxy).
-#   2) Usar um serviço de proxy residencial configurável via a
-#      variável de ambiente DJEN_PROXY_URL (ex.: "http://user:pass@host:porta").
-# ------------------------------------------------------------------
-DJEN_PROXY_URL = os.environ.get("DJEN_PROXY_URL")  # opcional
-
-def _montar_cliente_http():
-    proxies = DJEN_PROXY_URL if DJEN_PROXY_URL else None
-    return httpx.Client(
-        http2=True,
-        timeout=20.0,
-        follow_redirects=True,
-        proxies=proxies,
-        headers={
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                          "(KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-            "Accept": "application/json, text/plain, */*",
-            "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
-            "Accept-Encoding": "gzip, deflate, br",
-            "Origin": "https://comunica.pje.jus.br",
-            "Referer": "https://comunica.pje.jus.br/",
-            "Sec-Fetch-Site": "same-site",
-            "Sec-Fetch-Mode": "cors",
-            "Sec-Fetch-Dest": "empty",
-            "Sec-Ch-Ua": '"Chromium";v="125", "Not.A/Brand";v="24", "Google Chrome";v="125"',
-            "Sec-Ch-Ua-Mobile": "?0",
-            "Sec-Ch-Ua-Platform": '"Windows"',
-        },
-    )
-
-def _consultar_djen_com_retry(url, tentativas=3, espera_base=2.0):
-    ultimo_erro = None
-    with _montar_cliente_http() as client:
-        # "Aquece" a sessão visitando a página pública antes de chamar a API,
-        # para receber cookies (ex.: __cf_bm) que o WAF costuma exigir.
-        try:
-            client.get("https://comunica.pje.jus.br/")
-        except Exception:
-            pass  # se falhar, tenta a chamada à API mesmo assim
-
-        for tentativa in range(1, tentativas + 1):
-            try:
-                resp = client.get(url)
-                if resp.status_code == 200:
-                    return resp.json(), None
-                if resp.status_code == 403:
-                    ultimo_erro = (
-                        "403 (bloqueado pelo servidor do DJEN). Provavelmente é bloqueio "
-                        "por IP de datacenter (Render) ou por proteção anti-bot — ver "
-                        "comentário no código sobre DJEN_PROXY_URL."
-                    )
-                else:
-                    ultimo_erro = f"HTTP {resp.status_code}: {resp.text[:200]}"
-            except httpx.HTTPError as e:
-                ultimo_erro = str(e)
-
-            if tentativa < tentativas:
-                time.sleep(espera_base * tentativa)
-
-    return None, ultimo_erro
-
-@app.post("/prazos/sincronizar-djen")
-def sincronizar_djen():
-    oab = "182981"
-    uf = "SP"
-    url = f"https://comunicaapi.pje.jus.br/api/v1/comunicacao?numeroOab={oab}&ufOab={uf}"
-
-    payload, erro = _consultar_djen_com_retry(url)
-    if erro:
-        return RedirectResponse(url=f"/prazos?erro={erro.replace(' ', '+')}", status_code=303)
-
-    items = payload.get('items', [])
-
-    novos_registros = 0
     duplicados = 0
 
     conn = get_db_connection()
