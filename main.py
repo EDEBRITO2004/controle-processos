@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 import os
-from datetime import date
-from fastapi import FastAPI, Form, Request
+import json
+import urllib.request
+from datetime import date, datetime, timedelta
+from fastapi import FastAPI, Form, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 import pg8000.native
 
@@ -60,6 +62,39 @@ def get_val(row, *keys):
             return row[k]
     return None
 
+# --- FUNÇÕES DE APOIO AO DJEN ---
+
+def eh_dia_util(dt):
+    """Verifica se a data é dia útil (desconsidera fins de semana e feriados nacionais fixos)."""
+    if dt.weekday() in (5, 6):  # Sábado e Domingo
+        return False
+    feriados_fixos = [(1, 1), (21, 4), (1, 5), (7, 9), (12, 10), (2, 11), (15, 11), (20, 11), (25, 12)]
+    if (dt.day, dt.month) in feriados_fixos:
+        return False
+    return True
+
+def calcular_prazo_5_dias_uteis(data_disp_str):
+    """Calcula a data da publicação e a data final do prazo (5 dias úteis após a publicação)."""
+    try:
+        dt_disp = datetime.strptime(data_disp_str, "%Y-%m-%d").date()
+    except ValueError:
+        dt_disp = datetime.now().date()
+        
+    # Publicação ocorre no 1º dia útil seguinte à disponibilização
+    dt_pub = dt_disp + timedelta(days=1)
+    while not eh_dia_util(dt_pub):
+        dt_pub += timedelta(days=1)
+        
+    # Contagem de 5 dias úteis a partir da publicação
+    dias = 0
+    dt_limite = dt_pub
+    while dias < 5:
+        dt_limite += timedelta(days=1)
+        if eh_dia_util(dt_limite):
+            dias += 1
+            
+    return dt_pub, dt_limite
+
 # ------------------------------------------------------------------
 # TEMPLATE DA TELA DE ABERTURA (SPLASH)
 # ------------------------------------------------------------------
@@ -84,7 +119,6 @@ SPLASH_TEMPLATE = """<!DOCTYPE html>
             padding: 20px;
         }
 
-        /* Contêiner Principal da Balança */
         .balanca {
             position: relative;
             width: 160px;
@@ -95,7 +129,6 @@ SPLASH_TEMPLATE = """<!DOCTYPE html>
             margin-bottom: 24px;
         }
 
-        /* Haste Central Vertical */
         .haste-vertical {
             width: 6px;
             height: 100px;
@@ -104,7 +137,6 @@ SPLASH_TEMPLATE = """<!DOCTYPE html>
             top: 15px;
         }
 
-        /* Esfera no Topo */
         .topo {
             width: 14px;
             height: 14px;
@@ -114,7 +146,6 @@ SPLASH_TEMPLATE = """<!DOCTYPE html>
             top: 5px;
         }
 
-        /* Travessão Horizontal */
         .haste-horizontal {
             width: 140px;
             height: 5px;
@@ -124,7 +155,6 @@ SPLASH_TEMPLATE = """<!DOCTYPE html>
             border-radius: 2px;
         }
 
-        /* Pratos da Balança (Semicírculos) */
         .prato {
             width: 40px;
             height: 20px;
@@ -139,7 +169,6 @@ SPLASH_TEMPLATE = """<!DOCTYPE html>
         .prato.esquerdo { left: 0px; }
         .prato.direito { right: 0px; }
 
-        /* Base Trapezoidal */
         .base {
             width: 0;
             height: 0;
@@ -199,7 +228,6 @@ PAINEL_TEMPLATE = """<!DOCTYPE html>
         
         .container { max-width: 500px; margin: 20px auto; padding: 0 15px; }
         
-        /* Cards dos Contadores */
         .stats-grid { display: flex; flex-direction: column; gap: 12px; margin-bottom: 25px; }
         .stat-card { background: white; padding: 16px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); text-align: center; border-left: 5px solid #1e4570; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .stat-card.prazo { border-left-color: #dc3545; }
@@ -207,7 +235,6 @@ PAINEL_TEMPLATE = """<!DOCTYPE html>
         .stat-val { font-size: 2rem; font-weight: bold; color: #0d233a; display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
         .stat-card p { font-size: 0.9rem; color: #666; font-weight: 600; }
 
-        /* Módulos de Gestão */
         .modules-title { font-size: 1.1rem; color: #0d233a; margin-bottom: 15px; font-weight: bold; }
         .modules-grid { display: flex; flex-direction: column; gap: 12px; }
         .module-btn { background-color: #1e4570; color: white; padding: 16px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 3px 8px rgba(0,0,0,0.1); transition: background 0.2s; }
@@ -225,7 +252,6 @@ PAINEL_TEMPLATE = """<!DOCTYPE html>
     </header>
 
     <div class="container">
-        <!-- Indicadores -->
         <div class="stats-grid">
             <div class="stat-card prazo">
                 <div class="stat-val">⏳ {{TOTAL_PRAZOS}}</div>
@@ -247,7 +273,6 @@ PAINEL_TEMPLATE = """<!DOCTYPE html>
 
         <h2 class="modules-title">Módulos de Gestão</h2>
 
-        <!-- Botões vinculados individualmente às suas listas -->
         <div class="modules-grid">
             <a href="/sistema?tab=prazos" class="module-btn">
                 <span>⏳ Gestão de Prazos</span>
@@ -467,6 +492,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <div class="container">
         {{ERRO_BANNER}}
         <div id="prazos" class="section">
+            <div style="margin-bottom: 12px;">
+                <button onclick="sincronizarDJEN()" style="width: 100%; padding: 10px; background-color: #198754; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 0.9rem; cursor: pointer;">
+                    🔄 Sincronizar Publicações DJEN (OAB 182981/SP)
+                </button>
+            </div>
             <div class="sub-filter-bar">
                 <button class="btn-sub-filter" onclick="filtrarPrazos('vencidos', this)">Vencidos ({{CNT_VENCIDOS}})</button>
                 <button class="btn-sub-filter" onclick="filtrarPrazos('vencendo', this)">Vencendo ({{CNT_VENCENDO}})</button>
@@ -530,6 +560,29 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 setTimeout(function() {
                     window.open(url, '_blank');
                 }, 300);
+            }
+        }
+
+        async function sincronizarDJEN() {
+            var btn = event.target;
+            btn.disabled = true;
+            btn.innerText = "⏳ Buscando publicações no CNJ...";
+            
+            try {
+                var response = await fetch('/prazos/sincronizar-djen', { method: 'POST' });
+                var res = await response.json();
+                
+                if (response.ok) {
+                    alert("Sincronização concluída com sucesso!\n\nNovas publicações adicionadas: " + res.novos + "\nPublicações já existentes: " + res.duplicados);
+                    location.reload();
+                } else {
+                    alert("Erro ao sincronizar: " + (res.detail || "Erro desconhecido"));
+                }
+            } catch (err) {
+                alert("Erro na requisição: " + err);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "🔄 Sincronizar Publicações DJEN (OAB 182981/SP)";
             }
         }
 
@@ -1016,6 +1069,9 @@ async def sistema():
 
     return HTMLResponse(content=rendered_html)
 
+# ------------------------------------------------------------------
+# ROTA 3: ATUALIZAR OBSERVAÇÕES DA AGENDA
+# ------------------------------------------------------------------
 @app.post("/agenda/atualizar/{item_id}")
 async def atualizar_observacao_agenda(item_id: int, observacoes: str = Form(None)):
     conn = None
@@ -1031,6 +1087,82 @@ async def atualizar_observacao_agenda(item_id: int, observacoes: str = Form(None
         if conn:
             try: conn.close()
             except Exception: pass
+
+# ------------------------------------------------------------------
+# ROTA 4: SINCRONIZAR PUBLICAÇÕES DO DJEN (CNJ)
+# ------------------------------------------------------------------
+@app.post("/prazos/sincronizar-djen")
+def sincronizar_djen():
+    oab = "182981"
+    uf = "SP"
+    url = f"https://comunicaapi.pje.jus.br/api/v1/comunicacao?numeroOab={oab}&ufOab={uf}"
+    
+    req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+    
+    try:
+        with urllib.request.urlopen(req) as response:
+            payload = json.loads(response.read().decode('utf-8'))
+            items = payload.get('items', [])
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao consultar a API do DJEN: {str(e)}")
+        
+    novos_registros = 0
+    duplicados = 0
+
+    conn = get_db_connection()
+
+    try:
+        for item in items:
+            num_processo = item.get('numero_processo', '')
+            data_disp = item.get('data_disponibilizacao', '')
+            texto_pub = item.get('texto', '')
+            tipo_comunicacao = item.get('nomeClasse', 'Intimação')
+
+            if not num_processo or not data_disp:
+                continue
+
+            dt_pub, dt_cumprimento = calcular_prazo_5_dias_uteis(data_disp)
+
+            # Trava de duplicidade com pg8000.native
+            res = conn.run(
+                'SELECT 1 FROM "Publicações" WHERE "ProcessoNovoCod1" = :proc AND "Data" = :data_pub',
+                proc=num_processo,
+                data_pub=dt_pub
+            )
+            if res:
+                duplicados += 1
+                continue
+
+            # Inserção na tabela Publicações com pg8000.native
+            conn.run(
+                '''
+                INSERT INTO "Publicações" 
+                ("ProcessoNovoCod1", "Data", "DataCumprimento", "Publicação", "Manifestação", "Cumprido")
+                VALUES (:proc, :data_pub, :data_cump, :texto, :tipo, :cumprido)
+                ''',
+                proc=num_processo,
+                data_pub=dt_pub,
+                data_cump=dt_cumprimento,
+                texto=texto_pub,
+                tipo=tipo_comunicacao,
+                cumprido=False
+            )
+            novos_registros += 1
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao salvar publicações no banco: {str(e)}")
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+    return {
+        "status": "sucesso",
+        "novos": novos_registros,
+        "duplicados": duplicados,
+        "total_recebido": len(items)
+    }
 
 if __name__ == "__main__":
     import uvicorn
