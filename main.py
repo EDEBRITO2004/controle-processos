@@ -4,7 +4,7 @@ import json
 import urllib.request
 from datetime import date, datetime, timedelta
 from fastapi import FastAPI, Form, Request, HTTPException
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 import pg8000.native
 
 app = FastAPI(title="Controle de Processos")
@@ -102,14 +102,8 @@ SPLASH_TEMPLATE = """<!DOCTYPE html>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body {
             background: linear-gradient(180deg, #0d47a1 0%, #1976d2 100%);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            color: white;
-            text-align: center;
-            padding: 20px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            min-height: 100vh; color: white; text-align: center; padding: 20px;
         }
         .balanca { position: relative; width: 160px; height: 140px; display: flex; flex-direction: column; align-items: center; margin-bottom: 24px; }
         .haste-vertical { width: 6px; height: 100px; background-color: #fbc02d; position: absolute; top: 15px; }
@@ -233,152 +227,29 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
             --red-deadline: #dc3545;
             --bg-body: #f8f9fa;
         }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: var(--bg-body);
-            margin: 0;
-            padding-bottom: 30px;
-        }
-        header {
-            background-color: var(--blue-dark);
-            color: white;
-            padding: 16px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-weight: bold;
-            font-size: 1.1rem;
-        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg-body); margin: 0; padding-bottom: 30px; }
+        header { background-color: var(--blue-dark); color: white; padding: 16px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 1.1rem; }
         header a { color: #ffcc00; text-decoration: none; font-size: 0.88rem; }
-        .container {
-            padding: 12px;
-            max-width: 600px;
-            margin: 0 auto;
-        }
-        .search-box { margin-bottom: 12px; }
-        .search-box input {
-            width: 100%;
-            padding: 10px 12px;
-            border: 1px solid #ced4da;
-            border-radius: 8px;
-            font-size: 0.9rem;
-            box-sizing: border-box;
-            outline: none;
-        }
-        .sub-filter-bar {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 12px;
-        }
-        .btn-sub-filter {
-            flex: 1;
-            padding: 8px 4px;
-            border: 1px solid #ced4da;
-            background-color: #ffffff;
-            color: #495057;
-            border-radius: 6px;
-            font-size: 0.82rem;
-            font-weight: 600;
-            cursor: pointer;
-            text-align: center;
-        }
-        .btn-sub-filter.active {
-            background-color: var(--blue-primary);
-            color: white;
-            border-color: var(--blue-primary);
-        }
-        .card {
-            background: white;
-            border-radius: 10px;
-            padding: 14px;
-            margin-bottom: 10px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-            border-left: 4px solid var(--blue-primary);
-        }
+        .container { padding: 12px; max-width: 600px; margin: 0 auto; }
+        .search-form { display: flex; gap: 6px; margin-bottom: 12px; }
+        .search-form input { flex: 1; padding: 10px 12px; border: 1px solid #ced4da; border-radius: 8px; font-size: 0.9rem; outline: none; }
+        .search-form button { padding: 10px 16px; background-color: var(--blue-primary); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .sub-filter-bar { display: flex; gap: 8px; margin-bottom: 12px; }
+        .btn-sub-filter { flex: 1; padding: 10px 4px; border: 1px solid #ced4da; background-color: #ffffff; color: #495057; border-radius: 6px; font-size: 0.85rem; font-weight: bold; text-decoration: none; text-align: center; display: block; }
+        .btn-sub-filter.active { background-color: var(--blue-primary); color: white; border-color: var(--blue-primary); }
+        .card { background: white; border-radius: 10px; padding: 14px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border-left: 4px solid var(--blue-primary); }
         .card.card-prazo { border-left-color: var(--red-deadline); }
         .card h3 { margin: 0 0 6px 0; color: var(--blue-dark); font-size: 1rem; }
         .card.card-prazo h3 { color: var(--red-deadline); }
         .card p { margin: 3px 0; color: #495057; font-size: 0.9rem; }
-
-        .obs-form {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            margin-top: 4px;
-        }
-        .obs-form textarea {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ced4da;
-            border-radius: 6px;
-            font-size: 0.88rem;
-            box-sizing: border-box;
-            resize: none;
-            overflow-y: hidden;
-            min-height: 50px;
-            font-family: inherit;
-        }
-        .obs-form button {
-            align-self: flex-end;
-            background-color: var(--blue-primary);
-            color: white;
-            border: none;
-            padding: 6px 14px;
-            border-radius: 6px;
-            font-size: 0.82rem;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        .pub-details summary {
-            color: var(--blue-dark);
-            font-weight: bold;
-            font-size: 0.9rem;
-            cursor: pointer;
-            outline: none;
-        }
-        .pub-content {
-            margin-top: 8px;
-            padding: 10px;
-            background-color: #f8f9fa;
-            border-radius: 6px;
-            font-size: 0.88rem;
-            color: #333;
-            white-space: pre-wrap;
-        }
-        .sub-proc-list {
-            margin: 4px 0 0 0;
-            padding-left: 18px;
-            font-size: 0.85rem;
-            color: #495057;
-        }
-        .erro-banner {
-            background: #fff3cd;
-            color: #664d03;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 12px;
-            border: 1px solid #ffecb5;
-        }
-        #toast {
-            visibility: hidden;
-            min-width: 250px;
-            background-color: #198754;
-            color: #fff;
-            text-align: center;
-            border-radius: 8px;
-            padding: 12px;
-            position: fixed;
-            z-index: 1000;
-            left: 50%;
-            top: 20px;
-            transform: translateX(-50%);
-            font-size: 0.9rem;
-            font-weight: bold;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.15);
-            opacity: 0;
-            transition: opacity 0.3s, top 0.3s;
-        }
-        #toast.show { visibility: visible; opacity: 1; top: 30px; }
+        .obs-form { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+        .obs-form textarea { width: 100%; padding: 8px; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.88rem; box-sizing: border-box; resize: vertical; min-height: 60px; font-family: inherit; }
+        .obs-form button { align-self: flex-end; background-color: var(--blue-primary); color: white; border: none; padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: bold; cursor: pointer; }
+        .pub-details summary { color: var(--blue-dark); font-weight: bold; font-size: 0.9rem; cursor: pointer; outline: none; }
+        .pub-content { margin-top: 8px; padding: 10px; background-color: #f8f9fa; border-radius: 6px; font-size: 0.88rem; color: #333; white-space: pre-wrap; }
+        .sub-proc-list { margin: 4px 0 0 0; padding-left: 18px; font-size: 0.85rem; color: #495057; }
+        .info-banner { background: #d1e7dd; color: #0f5132; padding: 12px; border-radius: 8px; margin-bottom: 12px; border: 1px solid #badbcc; font-size: 0.9rem; font-weight: 500; }
+        .erro-banner { background: #f8d7da; color: #842029; padding: 12px; border-radius: 8px; margin-bottom: 12px; border: 1px solid #f5c2c7; font-size: 0.9rem; }
     </style>
 </head>
 <body>
@@ -386,125 +257,12 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
         <span>{{TITULO_PAGINA}}</span>
         <a href="/painel">📊 Voltar ao Painel</a>
     </header>
-    <div id="toast">✅ Concluído!</div>
 
     <div class="container">
+        {{INFO_BANNER}}
         {{ERRO_BANNER}}
         {{CONTEUDO_PAGINA}}
     </div>
-
-    <script>
-        function showToast(mensagem) {
-            var toast = document.getElementById("toast");
-            if (mensagem) toast.innerText = mensagem;
-            toast.className = "show";
-            setTimeout(function(){ toast.className = toast.className.replace("show", ""); }, 3000);
-        }
-
-        async function copiarENavegar(numero, url) {
-            if (numero && numero !== 'Sem Cód. Novo') {
-                try {
-                    await navigator.clipboard.writeText(numero);
-                    showToast("📋 Número " + numero + " copiado!");
-                } catch (err) {
-                    var textArea = document.createElement("textarea");
-                    textArea.value = numero;
-                    document.body.appendChild(textArea);
-                    textArea.select();
-                    document.execCommand("copy");
-                    document.body.removeChild(textArea);
-                    showToast("📋 Número " + numero + " copiado!");
-                }
-            }
-            if (url && url !== '#' && url !== '') {
-                setTimeout(function() {
-                    window.open(url, '_blank');
-                }, 300);
-            }
-        }
-
-        async function sincronizarDJEN() {
-            var btn = event.target;
-            btn.disabled = true;
-            btn.innerText = "⏳ Buscando publicações no CNJ...";
-            try {
-                var response = await fetch('/prazos/sincronizar-djen', { method: 'POST' });
-                var res = await response.json();
-                if (response.ok) {
-                    alert("Sincronização realizada!\nNovos: " + res.novos + "\nJá existentes: " + res.duplicados);
-                    location.reload();
-                } else {
-                    alert("Erro ao sincronizar: " + (res.detail || "Erro desconhecido"));
-                }
-            } catch (err) {
-                alert("Erro na requisição: " + err);
-            } finally {
-                btn.disabled = false;
-                btn.innerText = "🔄 Sincronizar Publicações DJEN (OAB 182981/SP)";
-            }
-        }
-
-        async function salvarObservacao(event, form, itemId) {
-            event.preventDefault();
-            var formData = new FormData(form);
-            try {
-                var response = await fetch('/agenda/atualizar/' + itemId, {
-                    method: 'POST',
-                    body: formData
-                });
-                var res = await response.json();
-                if (res.status === 'ok') {
-                    showToast("✅ Observação salva com sucesso!");
-                } else {
-                    alert("Erro ao salvar: " + (res.message || "Erro"));
-                }
-            } catch (err) {
-                alert("Erro na requisição: " + err);
-            }
-        }
-
-        function filtrarPrazos(categoria, btnEl) {
-            document.querySelectorAll('.btn-sub-filter').forEach(function (btn) {
-                btn.classList.remove('active');
-            });
-            if (btnEl) btnEl.classList.add('active');
-
-            var itens = document.querySelectorAll('.item-prazo');
-            var visiveis = 0;
-            itens.forEach(function (item) {
-                if (item.classList.contains('status-' + categoria)) {
-                    item.style.display = '';
-                    visiveis++;
-                } else {
-                    item.style.display = 'none';
-                }
-            });
-
-            document.querySelectorAll('.empty-msg').forEach(function (msg) {
-                msg.style.display = 'none';
-            });
-            if (visiveis === 0) {
-                var msg = document.querySelector('.msg-' + categoria);
-                if (msg) msg.style.display = 'block';
-            }
-        }
-
-        function filtrarProcessos() {
-            var termo = document.getElementById('search-processos').value.toLowerCase();
-            document.querySelectorAll('.card-item-processo').forEach(function (card) {
-                var texto = card.getAttribute('data-search') || '';
-                card.style.display = texto.includes(termo) ? '' : 'none';
-            });
-        }
-
-        function filtrarClientes() {
-            var termo = document.getElementById('search-clientes').value.toLowerCase();
-            document.querySelectorAll('.card-item-cliente').forEach(function (card) {
-                var texto = card.getAttribute('data-search') || '';
-                card.style.display = texto.includes(termo) ? '' : 'none';
-            });
-        }
-    </script>
 </body>
 </html>"""
 
@@ -548,12 +306,12 @@ async def painel():
                           .replace("{{TOTAL_CLIENTES}}", str(cnt_clientes))
     return HTMLResponse(content=html)
 
-# MÓDULO 1: PRAZOS
+# MÓDULO 1: PRAZOS (Com filtro nativo via Query String)
 @app.get("/prazos", response_class=HTMLResponse)
-async def pagina_prazos():
+async def pagina_prazos(aba: str = "a_vencer", msg: str = None, erro: str = None):
     hoje = date.today()
     prazos = []
-    erro_db = ""
+    erro_db = erro or ""
     conn = None
     try:
         conn = get_db_connection()
@@ -609,15 +367,17 @@ async def pagina_prazos():
 
         counts[categoria_prazo] += 1
 
+        if categoria_prazo != aba:
+            continue
+
         identificacao_proc = cod_novo
         if num_proc and num_proc != cod_novo:
             identificacao_proc += f" ({num_proc})" if cod_novo else num_proc
 
         proc_line = f"<p><strong>Processo:</strong> {identificacao_proc}</p>" if identificacao_proc else ""
-        disp_style = "" if categoria_prazo == "a_vencer" else "style='display:none;'"
 
         cards_html += f"""
-        <div class="card card-prazo item-prazo status-{categoria_prazo}" {disp_style}>
+        <div class="card card-prazo">
             <h3>⏳ Data Cumprimento: {data_cumprimento_fmt}</h3>
             <p><strong>Publicado em:</strong> {data_publicacao_fmt}</p>
             {proc_line}
@@ -630,34 +390,42 @@ async def pagina_prazos():
         </div>
         """
 
+    if not cards_html:
+        cards_html = f"<div style='padding:15px; color:#6c757d; background:white; border-radius:8px;'>Nenhum prazo nesta categoria ({aba.replace('_', ' ')}).</div>"
+
+    active_v = "active" if aba == "vencidos" else ""
+    active_vc = "active" if aba == "vencendo" else ""
+    active_av = "active" if aba == "a_vencer" else ""
+
     conteudo = f"""
     <div style="margin-bottom: 12px;">
-        <button onclick="sincronizarDJEN()" style="width: 100%; padding: 10px; background-color: #198754; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 0.9rem; cursor: pointer;">
-            🔄 Sincronizar Publicações DJEN (OAB 182981/SP)
-        </button>
+        <form action="/prazos/sincronizar-djen" method="post">
+            <button type="submit" style="width: 100%; padding: 12px; background-color: #198754; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 0.9rem; cursor: pointer;">
+                🔄 Sincronizar Publicações DJEN (OAB 182981/SP)
+            </button>
+        </form>
     </div>
     <div class="sub-filter-bar">
-        <button class="btn-sub-filter" onclick="filtrarPrazos('vencidos', this)">Vencidos ({counts['vencidos']})</button>
-        <button class="btn-sub-filter" onclick="filtrarPrazos('vencendo', this)">Vencendo ({counts['vencendo']})</button>
-        <button class="btn-sub-filter active" onclick="filtrarPrazos('a_vencer', this)">A vencer ({counts['a_vencer']})</button>
+        <a href="/prazos?aba=vencidos" class="btn-sub-filter {active_v}">Vencidos ({counts['vencidos']})</a>
+        <a href="/prazos?aba=vencendo" class="btn-sub-filter {active_vc}">Vencendo ({counts['vencendo']})</a>
+        <a href="/prazos?aba=a_vencer" class="btn-sub-filter {active_av}">A vencer ({counts['a_vencer']})</a>
     </div>
-    <div id="prazos-list">
+    <div>
         {cards_html}
-        <div class="empty-msg msg-vencidos" style="display:none; padding:15px; color:#6c757d;">Nenhum prazo vencido.</div>
-        <div class="empty-msg msg-vencendo" style="display:none; padding:15px; color:#6c757d;">Nenhum prazo vencendo hoje.</div>
-        <div class="empty-msg msg-a_vencer" style="{'display:block;' if counts['a_vencer'] == 0 else 'display:none;'} padding:15px; color:#6c757d;">Nenhum prazo futuro a vencer.</div>
     </div>
     """
 
-    erro_banner = f'<div class="erro-banner">⚠️ Erro no Banco: {erro_db}</div>' if erro_db else ""
+    info_banner = f'<div class="info-banner">{msg}</div>' if msg else ""
+    erro_banner = f'<div class="erro-banner">⚠️ Erro: {erro_db}</div>' if erro_db else ""
     html = PAGE_TEMPLATE.replace("{{TITULO_PAGINA}}", "Gestão de Prazos")\
+                        .replace("{{INFO_BANNER}}", info_banner)\
                         .replace("{{ERRO_BANNER}}", erro_banner)\
                         .replace("{{CONTEUDO_PAGINA}}", conteudo)
     return HTMLResponse(content=html)
 
 # MÓDULO 2: AGENDA
 @app.get("/agenda", response_class=HTMLResponse)
-async def pagina_agenda():
+async def pagina_agenda(msg: str = None):
     agenda = []
     erro_db = ""
     conn = None
@@ -728,7 +496,7 @@ async def pagina_agenda():
             <details class="pub-details">
                 <summary>{titulo_obs}</summary>
                 <div class="pub-content">
-                    <form class="obs-form" onsubmit="salvarObservacao(event, this, {item_id})">
+                    <form class="obs-form" action="/agenda/atualizar/{item_id}" method="post">
                         <textarea name="observacoes" placeholder="Digite aqui as observações...">{obs}</textarea>
                         <button type="submit">💾 Salvar Observação</button>
                     </form>
@@ -738,20 +506,23 @@ async def pagina_agenda():
         """
 
     if not agenda:
-        cards_html = "<p style='padding:15px;'>Nenhum registro pendente na Agenda.</p>"
+        cards_html = "<p style='padding:15px; background:white; border-radius:8px;'>Nenhum registro pendente na Agenda.</p>"
 
+    info_banner = f'<div class="info-banner">{msg}</div>' if msg else ""
     erro_banner = f'<div class="erro-banner">⚠️ Erro no Banco: {erro_db}</div>' if erro_db else ""
     html = PAGE_TEMPLATE.replace("{{TITULO_PAGINA}}", "Agenda & Audiências")\
+                        .replace("{{INFO_BANNER}}", info_banner)\
                         .replace("{{ERRO_BANNER}}", erro_banner)\
                         .replace("{{CONTEUDO_PAGINA}}", cards_html)
     return HTMLResponse(content=html)
 
-# MÓDULO 3: PROCESSOS
+# MÓDULO 3: PROCESSOS (Busca Nativa do Servidor)
 @app.get("/processos", response_class=HTMLResponse)
-async def pagina_processos():
+async def pagina_processos(q: str = ""):
     processos = []
     erro_db = ""
     conn = None
+    termo_busca = q.strip().lower()
     try:
         conn = get_db_connection()
         q_proc = """
@@ -781,6 +552,7 @@ async def pagina_processos():
             except Exception: pass
 
     cards_html = ""
+    encontrados = 0
     for proc in processos:
         cod_novo = get_val(proc, 'ProcessoNovoCod1') or 'Sem Cód. Novo'
         num_proc = get_val(proc, 'Processo') or ''
@@ -791,22 +563,24 @@ async def pagina_processos():
         sistema_nome = get_val(proc, 'sistema_nome') or ''
         sistema_link = get_val(proc, 'sistema_link') or ''
 
-        num_copia = cod_novo if cod_novo != 'Sem Cód. Novo' else num_proc
-        num_copia_clean = str(num_copia).replace('"', '&quot;').replace("'", "\\'")
+        texto_busca = f"{cod_novo} {num_proc} {cliente} {parte_contraria} {acao} {vara} {sistema_nome}".lower()
+        if termo_busca and termo_busca not in texto_busca:
+            continue
+
+        encontrados += 1
 
         if sistema_link and str(sistema_link).strip():
             url = str(sistema_link).strip()
             if not url.startswith(('http://', 'https://')): url = 'https://' + url
-            btn_link_html = f'''<button type="button" onclick="copiarENavegar('{num_copia_clean}', '{url}')" style="display:inline-block; margin-top:8px; padding:8px 12px; background-color:#0d6efd; color:white; border:none; border-radius:6px; font-size:0.85rem; font-weight:bold; cursor:pointer;">🔗 Copiar Nº e Acessar {sistema_nome or "Sistema"}</button>'''
+            btn_link_html = f'''<a href="{url}" target="_blank" style="display:inline-block; margin-top:8px; padding:8px 12px; background-color:#0d6efd; color:white; border-radius:6px; font-size:0.85rem; font-weight:bold; text-decoration:none;">🔗 Acessar {sistema_nome or "Sistema"}</a>'''
         else:
-            btn_link_html = f'''<button type="button" onclick="copiarENavegar('{num_copia_clean}', '')" style="margin-top:8px; padding:8px 12px; background-color:#6c757d; color:white; border:none; border-radius:6px; font-size:0.85rem; cursor:pointer;">📋 Copiar Nº (Sem link cadastrado)</button>'''
+            btn_link_html = ''
 
-        texto_busca = f"{cod_novo} {num_proc} {cliente} {parte_contraria} {acao} {vara} {sistema_nome}".lower()
         proc_num_line = f"<p><strong>Nº Processo:</strong> {num_proc}</p>" if num_proc else ""
         sistema_line = f"<p><strong>Sistema:</strong> {sistema_nome}</p>" if sistema_nome else ""
 
         cards_html += f"""
-        <div class="card card-item-processo" data-search="{texto_busca}">
+        <div class="card">
             <h3>📁 {cod_novo}</h3>
             {proc_num_line}
             <p><strong>Cliente:</strong> {cliente}</p>
@@ -818,28 +592,34 @@ async def pagina_processos():
         </div>
         """
 
+    if encontrados == 0:
+        cards_html = "<p style='padding:15px; background:white; border-radius:8px;'>Nenhum processo encontrado.</p>"
+
     conteudo = f"""
-    <div class="search-box">
-        <input type="text" id="search-processos" placeholder="🔍 Buscar processo, cliente, ação..." onkeyup="filtrarProcessos()">
-    </div>
-    <div id="lista-processos">
-        {cards_html if processos else "<p style='padding:15px;'>Nenhum processo encontrado.</p>"}
+    <form class="search-form" action="/processos" method="get">
+        <input type="text" name="q" value="{q}" placeholder="🔍 Buscar por código, processo, cliente, vara...">
+        <button type="submit">Buscar</button>
+    </form>
+    <div>
+        {cards_html}
     </div>
     """
 
     erro_banner = f'<div class="erro-banner">⚠️ Erro no Banco: {erro_db}</div>' if erro_db else ""
     html = PAGE_TEMPLATE.replace("{{TITULO_PAGINA}}", "Gestão de Processos")\
+                        .replace("{{INFO_BANNER}}", "")\
                         .replace("{{ERRO_BANNER}}", erro_banner)\
                         .replace("{{CONTEUDO_PAGINA}}", conteudo)
     return HTMLResponse(content=html)
 
-# MÓDULO 4: CLIENTES
+# MÓDULO 4: CLIENTES (Busca Nativa do Servidor)
 @app.get("/clientes", response_class=HTMLResponse)
-async def pagina_clientes():
+async def pagina_clientes(q: str = ""):
     clientes = []
     processos = []
     erro_db = ""
     conn = None
+    termo_busca = q.strip().lower()
     try:
         conn = get_db_connection()
         clientes = fetch_all_dict(conn, 'SELECT * FROM "Clientes" ORDER BY "Nomecli" ASC;')
@@ -860,6 +640,7 @@ async def pagina_clientes():
             processos_por_cliente[cod_cli].append(proc)
 
     cards_html = ""
+    encontrados = 0
     for cli in clientes:
         cod_cli = get_val(cli, 'CodCli')
         nome = get_val(cli, 'Nomecli', 'Empresa') or 'Sem Nome'
@@ -874,6 +655,12 @@ async def pagina_clientes():
         partes_end = [p for p in [endereco_rua, cidade, cep] if p]
         endereco_completo = ", ".join(partes_end) if partes_end else "Não informado"
 
+        texto_busca = f"{nome} {doc} {rg} {tel} {endereco_completo}".lower()
+        if termo_busca and termo_busca not in texto_busca:
+            continue
+
+        encontrados += 1
+
         procs_cli = processos_por_cliente.get(cod_cli, [])
         procs_html = ""
         if procs_cli:
@@ -887,10 +674,8 @@ async def pagina_clientes():
         else:
             procs_html = "<p style='font-size:0.85rem; color:#6c757d; margin-top:4px;'>Nenhum processo vinculado.</p>"
 
-        texto_busca = f"{nome} {doc} {rg} {tel} {endereco_completo}".lower()
-
         cards_html += f"""
-        <div class="card card-item-cliente" data-search="{texto_busca}">
+        <div class="card">
             <details class="pub-details">
                 <summary style="cursor:pointer; outline:none;">
                     <div style="font-size:1.05rem; font-weight:bold; color:var(--blue-dark); margin-bottom:4px;">👤 {nome}</div>
@@ -908,31 +693,28 @@ async def pagina_clientes():
         </div>
         """
 
+    if encontrados == 0:
+        cards_html = "<p style='padding:15px; background:white; border-radius:8px;'>Nenhum cliente encontrado.</p>"
+
     conteudo = f"""
-    <div class="search-box">
-        <input type="text" id="search-clientes" placeholder="🔍 Buscar por nome, CPF/CNPJ, cidade..." onkeyup="filtrarClientes()">
-    </div>
-    <div id="lista-clientes">
-        {cards_html if clientes else "<p style='padding:15px;'>Nenhum cliente encontrado.</p>"}
+    <form class="search-form" action="/clientes" method="get">
+        <input type="text" name="q" value="{q}" placeholder="🔍 Buscar por nome, CPF/CNPJ, cidade...">
+        <button type="submit">Buscar</button>
+    </form>
+    <div>
+        {cards_html}
     </div>
     """
 
     erro_banner = f'<div class="erro-banner">⚠️ Erro no Banco: {erro_db}</div>' if erro_db else ""
     html = PAGE_TEMPLATE.replace("{{TITULO_PAGINA}}", "Cadastro de Clientes")\
+                        .replace("{{INFO_BANNER}}", "")\
                         .replace("{{ERRO_BANNER}}", erro_banner)\
                         .replace("{{CONTEUDO_PAGINA}}", conteudo)
     return HTMLResponse(content=html)
 
-# ROTA SECUNDÁRIA DE COMPATIBILIDADE PARA /sistema
-@app.get("/sistema", response_class=HTMLResponse)
-async def sistema(tab: str = "prazos"):
-    if tab == "agenda": return await pagina_agenda()
-    elif tab == "processos": return await pagina_processos()
-    elif tab == "clientes": return await pagina_clientes()
-    return await pagina_prazos()
-
 # ------------------------------------------------------------------
-# ROTA DE AÇÕES E API DJEN
+# AÇÕES
 # ------------------------------------------------------------------
 @app.post("/agenda/atualizar/{item_id}")
 async def atualizar_observacao_agenda(item_id: int, observacoes: str = Form(None)):
@@ -942,9 +724,9 @@ async def atualizar_observacao_agenda(item_id: int, observacoes: str = Form(None
         texto_obs = observacoes.strip() if observacoes and observacoes.strip() else None
         query = 'UPDATE "Agenda" SET "Observações" = :obs WHERE "Código" = :id'
         conn.run(query, obs=texto_obs, id=item_id)
-        return JSONResponse(content={"status": "ok"})
+        return RedirectResponse(url="/agenda?msg=Observação+salva+com+sucesso!", status_code=303)
     except Exception as e:
-        return JSONResponse(content={"status": "error", "message": str(e)}, status_code=500)
+        return RedirectResponse(url=f"/agenda?msg=Erro+ao+salvar:+{str(e)}", status_code=303)
     finally:
         if conn:
             try: conn.close()
@@ -963,7 +745,8 @@ def sincronizar_djen():
             payload = json.loads(response.read().decode('utf-8'))
             items = payload.get('items', [])
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro ao consultar a API do DJEN: {str(e)}")
+        msg_erro = f"Erro+ao+consultar+DJEN:+{str(e)}"
+        return RedirectResponse(url=f"/prazos?erro={msg_erro}", status_code=303)
         
     novos_registros = 0
     duplicados = 0
@@ -1006,17 +789,14 @@ def sincronizar_djen():
             novos_registros += 1
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro ao salvar publicações no banco: {str(e)}")
+        msg_erro = f"Erro+ao+salvar+publicações:+{str(e)}"
+        return RedirectResponse(url=f"/prazos?erro={msg_erro}", status_code=303)
     finally:
         try: conn.close()
         except Exception: pass
 
-    return {
-        "status": "sucesso",
-        "novos": novos_registros,
-        "duplicados": duplicados,
-        "total_recebido": len(items)
-    }
+    msg_sucesso = f"Sincronização+concluída!+{novos_registros}+novas+publicações+inseridas.+({duplicados}+já+existiam+no+banco)."
+    return RedirectResponse(url=f"/prazos?msg={msg_sucesso}", status_code=303)
 
 if __name__ == "__main__":
     import uvicorn
