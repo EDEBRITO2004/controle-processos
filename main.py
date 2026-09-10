@@ -857,24 +857,24 @@ async def sistema():
         proc_line = f"<p><strong>Processo:</strong> {identificacao_proc}</p>" if identificacao_proc else ""
         titulo_obs = "▶ Ver/Editar observação" if obs and obs.strip() else "▶ Adicionar observação"
 
-        agenda_html += (
-            '<div class="card">'
-            f'<h3>📆 {tipo}</h3>'
-            f'<p><strong>Data:</strong> {data_hora_exibicao}</p>'
-            f'{proc_line}'
-            f'<p><strong>Cliente:</strong> {cliente}</p>'
-            f'<p><strong>Descrição:</strong> {desc}</p>'
-            '<details class="pub-details" onclick="setTimeout(initAutoResize, 50)">'
-            f'<summary>{titulo_obs}</summary>'
-            '<div class="pub-content">'
-            f'<form class="obs-form" onsubmit="salvarObservacao(event, this, {item_id})">'
-            f'<textarea name="observacoes" class="auto-resize" placeholder="Digite aqui as observações...">{obs}</textarea>'
-            '<button type="submit">💾 Salvar Observação</button>'
-            '</form>'
-            '</div>'
-            '</details>'
-            '</div>'
-        )
+        agenda_html += f"""
+        <div class="card">
+            <h3>📆 {tipo}</h3>
+            <p><strong>Data:</strong> {data_hora_exibicao}</p>
+            {proc_line}
+            <p><strong>Cliente:</strong> {cliente}</p>
+            <p><strong>Descrição:</strong> {desc}</p>
+            <details class="pub-details" onclick="setTimeout(initAutoResize, 50)">
+                <summary>{titulo_obs}</summary>
+                <div class="pub-content">
+                    <form class="obs-form" onsubmit="salvarObservacao(event, this, {item_id})">
+                        <textarea name="observacoes" class="auto-resize" placeholder="Digite aqui as observações...">{obs}</textarea>
+                        <button type="submit">💾 Salvar Observação</button>
+                    </form>
+                </div>
+            </details>
+        </div>
+        """
 
     if not agenda: 
         agenda_html = "<p style='padding:15px;'>Nenhum registro pendente na Agenda.</p>"
@@ -918,19 +918,19 @@ async def sistema():
 
         proc_line = f"<p><strong>Processo:</strong> {identificacao_proc}</p>" if identificacao_proc else ""
 
-        prazos_html += (
-            f'<div class="card card-prazo item-prazo status-{categoria_prazo}">'
-            f'<h3>⏳ Data Cumprimento: {data_cumprimento_fmt}</h3>'
-            f'<p><strong>Publicado em:</strong> {data_publicacao_fmt}</p>'
-            f'{proc_line}'
-            f'<p><strong>Cliente:</strong> {cliente}</p>'
-            f'<p><strong>Manifestação:</strong> {manifestacao}</p>'
-            '<details class="pub-details">'
-            '<summary>▶ Ver publicação</summary>'
-            f'<div class="pub-content">{publicacao}</div>'
-            '</details>'
-            '</div>'
-        )
+        prazos_html += f"""
+        <div class="card card-prazo item-prazo status-{categoria_prazo}">
+            <h3>⏳ Data Cumprimento: {data_cumprimento_fmt}</h3>
+            <p><strong>Publicado em:</strong> {data_publicacao_fmt}</p>
+            {proc_line}
+            <p><strong>Cliente:</strong> {cliente}</p>
+            <p><strong>Manifestação:</strong> {manifestacao}</p>
+            <details class="pub-details">
+                <summary>▶ Ver publicação</summary>
+                <div class="pub-content">{publicacao}</div>
+            </details>
+        </div>
+        """
 
     prazos_html += """
     <div class="empty-msg msg-vencidos" style="display:none; padding:15px; color:#6c757d;">Nenhum prazo vencido.</div>
@@ -957,40 +957,32 @@ async def sistema():
         sistema_link = get_val(proc, 'sistema_link') or ''
 
         num_copia = cod_novo if cod_novo != 'Sem Cód. Novo' else num_proc
-        num_copia_clean = str(num_copia).replace("'", "\\'")
+        num_copia_clean = str(num_copia).replace('"', '&quot;').replace("'", "\\'")
 
         if sistema_link and str(sistema_link).strip():
             url = str(sistema_link).strip()
             if not url.startswith(('http://', 'https://')): 
                 url = 'https://' + url
-            btn_link_html = f'''
-            <button type="button" onclick="copiarENavegar('{num_copia_clean}', '{url}')" style="display:inline-block; margin-top:8px; padding:8px 12px; background-color:#0d6efd; color:white; border:none; border-radius:6px; font-size:0.85rem; font-weight:bold; cursor:pointer;">
-                🔗 Copiar Nº e Acessar {sistema_nome or "Sistema"}
-            </button>
-            '''
+            btn_link_html = f'''<button type="button" onclick="copiarENavegar('{num_copia_clean}', '{url}')" style="display:inline-block; margin-top:8px; padding:8px 12px; background-color:#0d6efd; color:white; border:none; border-radius:6px; font-size:0.85rem; font-weight:bold; cursor:pointer;">🔗 Copiar Nº e Acessar {sistema_nome or "Sistema"}</button>'''
         else:
-            btn_link_html = f'''
-            <button type="button" onclick="copiarENavegar('{num_copia_clean}', '#')" style="margin-top:8px; padding:8px 12px; background-color:#6c757d; color:white; border:none; border-radius:6px; font-size:0.85rem; cursor:pointer;">
-                📋 Copiar Nº (Sem link cadastrado)
-            </button>
-            '''
+            btn_link_html = f'''<button type="button" onclick="copiarENavegar('{num_copia_clean}', '')" style="margin-top:8px; padding:8px 12px; background-color:#6c757d; color:white; border:none; border-radius:6px; font-size:0.85rem; cursor:pointer;">📋 Copiar Nº (Sem link cadastrado)</button>'''
 
         texto_busca = f"{cod_novo} {num_proc} {cliente} {parte_contraria} {acao} {vara} {sistema_nome}".lower()
         proc_num_line = f"<p><strong>Nº Processo:</strong> {num_proc}</p>" if num_proc else ""
         sistema_line = f"<p><strong>Sistema:</strong> {sistema_nome}</p>" if sistema_nome else ""
 
-        processos_html += (
-            f'<div class="card card-item-processo" data-search="{texto_busca}">'
-            f'<h3>📁 {cod_novo}</h3>'
-            f'{proc_num_line}'
-            f'<p><strong>Cliente:</strong> {cliente}</p>'
-            f'<p><strong>Parte Contrária:</strong> {parte_contraria}</p>'
-            f'<p><strong>Ação:</strong> {acao}</p>'
-            f'<p><strong>Vara/Juízo:</strong> {vara}</p>'
-            f'{sistema_line}'
-            f'{btn_link_html}'
-            '</div>'
-        )
+        processos_html += f"""
+        <div class="card card-item-processo" data-search="{texto_busca}">
+            <h3>📁 {cod_novo}</h3>
+            {proc_num_line}
+            <p><strong>Cliente:</strong> {cliente}</p>
+            <p><strong>Parte Contrária:</strong> {parte_contraria}</p>
+            <p><strong>Ação:</strong> {acao}</p>
+            <p><strong>Vara/Juízo:</strong> {vara}</p>
+            {sistema_line}
+            {btn_link_html}
+        </div>
+        """
     processos_html += "</div>"
     if not processos: processos_html = "<p style='padding:15px;'>Nenhum processo encontrado.</p>"
 
@@ -1032,40 +1024,38 @@ async def sistema():
 
         texto_busca = f"{nome} {doc} {rg} {tel} {endereco_completo}".lower()
 
-        clientes_html += (
-            f'<div class="card card-item-cliente" data-search="{texto_busca}">'
-            '<details class="pub-details">'
-            '<summary style="cursor:pointer; outline:none;">'
-            f'<div style="font-size:1.05rem; font-weight:bold; color:var(--blue-dark); margin-bottom:4px;">👤 {nome}</div>'
-            f'<div style="font-size:0.88rem; color:#495057; font-weight:normal;"><strong>Documento:</strong> {doc}</div>'
-            f'<div style="font-size:0.88rem; color:#495057; font-weight:normal;"><strong>Telefone:</strong> {tel}</div>'
-            '</summary>'
-            '<div class="pub-content" style="margin-top:10px;">'
-            f'<p><strong>RG:</strong> {rg}</p>'
-            f'<p><strong>Endereço:</strong> {endereco_completo}</p>'
-            '<hr style="border:0; border-top:1px solid #e0e0e0; margin:8px 0;">'
-            '<p><strong>Processos Relacionados:</strong></p>'
-            f'{procs_html}'
-            '</div>'
-            '</details>'
-            '</div>'
-        )
+        clientes_html += f"""
+        <div class="card card-item-cliente" data-search="{texto_busca}">
+            <details class="pub-details">
+                <summary style="cursor:pointer; outline:none;">
+                    <div style="font-size:1.05rem; font-weight:bold; color:var(--blue-dark); margin-bottom:4px;">👤 {nome}</div>
+                    <div style="font-size:0.88rem; color:#495057; font-weight:normal;"><strong>Documento:</strong> {doc}</div>
+                    <div style="font-size:0.88rem; color:#495057; font-weight:normal;"><strong>Telefone:</strong> {tel}</div>
+                </summary>
+                <div class="pub-content" style="margin-top:10px;">
+                    <p><strong>RG:</strong> {rg}</p>
+                    <p><strong>Endereço:</strong> {endereco_completo}</p>
+                    <hr style="border:0; border-top:1px solid #e0e0e0; margin:8px 0;">
+                    <p><strong>Processos Relacionados:</strong></p>
+                    {procs_html}
+                </div>
+            </details>
+        </div>
+        """
     clientes_html += "</div>"
     if not clientes: clientes_html = "<p style='padding:15px;'>Nenhum cliente encontrado.</p>"
 
     erro_banner = f'<div class="erro-banner">⚠️ Erro ao conectar no banco: {erro_db}</div>' if erro_db else ""
 
-    rendered_html = (
-        HTML_TEMPLATE
-       .replace("{{ERRO_BANNER}}", erro_banner)
-       .replace("{{CNT_VENCIDOS}}", str(counts['vencidos']))
-       .replace("{{CNT_VENCENDO}}", str(counts['vencendo']))
-       .replace("{{CNT_A_VENCER}}", str(counts['a_vencer']))
-       .replace("{{PRAZOS_HTML}}", prazos_html)
-       .replace("{{AGENDA_HTML}}", agenda_html)
-       .replace("{{PROCESSOS_HTML}}", processos_html)
-       .replace("{{CLIENTES_HTML}}", clientes_html)
-    )
+    rendered_html = HTML_TEMPLATE
+    rendered_html = rendered_html.replace("{{ERRO_BANNER}}", erro_banner)
+    rendered_html = rendered_html.replace("{{CNT_VENCIDOS}}", str(counts['vencidos']))
+    rendered_html = rendered_html.replace("{{CNT_VENCENDO}}", str(counts['vencendo']))
+    rendered_html = rendered_html.replace("{{CNT_A_VENCER}}", str(counts['a_vencer']))
+    rendered_html = rendered_html.replace("{{PRAZOS_HTML}}", prazos_html)
+    rendered_html = rendered_html.replace("{{AGENDA_HTML}}", agenda_html)
+    rendered_html = rendered_html.replace("{{PROCESSOS_HTML}}", processos_html)
+    rendered_html = rendered_html.replace("{{CLIENTES_HTML}}", clientes_html)
 
     return HTMLResponse(content=rendered_html)
 
