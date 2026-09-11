@@ -1,53 +1,79 @@
-import webbrowser
-from threading import Timer
 from flask import Flask, render_template_string, request
-import requests
 import re
 import html
 from datetime import date, datetime, timedelta
-headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-}
-response = requests.get(url, params=params, headers=headers)
+from urllib.parse import quote_plus
+import webbrowser
+from threading import Timer
 
 app = Flask(__name__)
 
-def buscar_dados(oab="182981", uf="SP", dias_atras=5):
+def buscar_dados_mock(oab="182981", uf="SP", dias_atras=5):
     hoje = date.today()
     inicio = hoje - timedelta(days=dias_atras)
     
-    url = "https://comunicaapi.pje.jus.br/api/v1/comunicacao"
-    params = {
-        "numeroOab": oab,
-        "ufOab": uf,
-        "dataDisponibilizacaoInicio": inicio.strftime("%Y-%m-%d"),
-        "dataDisponibilizacaoFim": hoje.strftime("%Y-%m-%d"),
+    mock_response = {
+        "total": 2,
         "pagina": 1,
-        "itensPorPagina": 50
+        "itensPorPagina": 50,
+        "totalPaginas": 1,
+        "items": [
+            {
+                "id": "a1b2c3d4-e5f6-47a8-b9c0-d1e2f3a4b5c6",
+                "tipo_comunicacao": "intimacao",
+                "nome_classe": "Procedimento Comum Cível",
+                "numero_processo": "1001234-56.2026.8.26.0236",
+                "data_disponibilizacao": "2026-09-09",
+                "meio": "D",
+                "link": "https://pje.tjsp.jus.br/pje/Processo/ConsultaDocumento/listView.seam",
+                "texto": "Processo 1001234-56.2026.8.26.0236. Fica a parte autora intimada para, no prazo de 15 dias, manifestar-se sobre a contestacao apresentada.",
+                "siglaTribunal": "TJSP",
+                "destinatario": {
+                    "nome": "EDE BRITO",
+                    "numeroOab": "182981",
+                    "ufOab": "SP",
+                    "tipo": "ADVOGADO"
+                },
+                "orgao_julgador": {
+                    "nome": "1ª Vara Cível da Comarca de Ibitinga",
+                    "codigo": "0236",
+                    "siglaTribunal": "TJSP"
+                }
+            },
+            {
+                "id": "b2c3d4e5-f6a7-48b9-c0d1-e2f3a4b5c6d7",
+                "tipo_comunicacao": "intimacao",
+                "nome_classe": "Ação Penal - Procedimento Ordinário",
+                "numero_processo": "1500987-65.2026.8.26.0236",
+                "data_disponibilizacao": "2026-09-08",
+                "meio": "D",
+                "link": None,
+                "texto": "Processo CRIMINAL 1500987-65.2026.8.26.0236. Designo AUDIENCIA de instrucao e julgamento para o dia 25/10/2026 as 14:00 horas.",
+                "siglaTribunal": "TJSP",
+                "destinatario": {
+                    "nome": "EDE BRITO",
+                    "numeroOab": "182981",
+                    "ufOab": "SP",
+                    "tipo": "ADVOGADO"
+                },
+                "orgao_julgador": {
+                    "nome": "Vara Criminal da Comarca de Ibitinga",
+                    "codigo": "0237",
+                    "siglaTribunal": "TJSP"
+                }
+            }
+        ]
     }
-    
-    try:
-        resp = requests.get(url, params=params, timeout=10)
-        if resp.status_code == 200:
-            return resp.json().get("items", []), inicio.strftime("%d/%m/%Y"), hoje.strftime("%d/%m/%Y")
-    except Exception as e:
-        print(f"Erro na requisição: {e}")
-    return [], inicio.strftime("%d/%m/%Y"), hoje.strftime("%d/%m/%Y")
+    return mock_response.get("items", []), inicio.strftime("%d/%m/%Y"), hoje.strftime("%d/%m/%Y")
 
 def destacar_termos(texto):
-    termos = [
-        r'\baudi&ecirc;ncia\b', r'\baudiencia\b', r'\bsenten&ccedil;a\b', r'\bsentenca\b',
-        r'\brecurso\b', r'\bperi&ccedil;i&a\b', r'\bpericia\b', r'\bprazo\b', r'\bdespacho\b',
-        r'\bac&oacute;rd&atilde;o\b', r'\bacordao\b', r'\bliminar\b'
-    ]
-    texto_destacado = texto
-    for termo in termos:
-        texto_destacado = re.sub(
-            f'({termo})', 
-            r'<mark style="background-color: #fef08a; padding: 2px 4px; border-radius: 4px; font-weight: bold; color: #854d0e;">\1</mark>', 
-            texto_destacado, 
-            flags=re.IGNORECASE
-        )
+    padrao = r'\b(audiencia|sentenca|recurso|pericia|prazo|despacho|acordao|liminar)\b'
+    texto_destacado = re.sub(
+        padrao, 
+        r'<mark style="background-color: #fef08a; padding: 2px 4px; border-radius: 4px; font-weight: bold; color: #854d0e;">\1</mark>', 
+        texto, 
+        flags=re.IGNORECASE
+    )
     return texto_destacado
 
 @app.route("/")
@@ -55,8 +81,9 @@ def home():
     oab = request.args.get("oab", "182981")
     uf = request.args.get("uf", "SP")
     
-    items, dt_inicio, dt_fim = buscar_dados(oab=oab, uf=uf, dias_atras=5)
-    nome_advogado = "Ede Brito" if oab == "182981" and uf == "SP" else "Consulta OAB"
+    items, dt_inicio, dt_fim = buscar_dados_mock(oab=oab, uf=uf, dias_atras=5)
+    
+    nome_advogado = "Ede Brito" if oab == "182981" and uf == "SP" else f"Consulta OAB {oab}/{uf}"
     
     cards_html = ""
     if not items:
@@ -77,7 +104,7 @@ def home():
             dias = int(match_prazo.group(1)) if match_prazo else 5
             
             e_criminal = "CRIMINAL" in texto_limpo.upper()
-            e_audiencia = "AUDIENCIA" in texto_limpo.upper() or "AUDIÊNCIA" in texto_limpo.upper()
+            e_audiencia = "AUDIENCIA" in texto_limpo.upper()
             rito = "Criminal (Dias Corridos)" if e_criminal else "Cível / Trabalhista (Dias Úteis)"
             
             tipo_evento = "Audiência" if e_audiencia else "Prazo"
@@ -87,6 +114,7 @@ def home():
             dt_pub = dt_disp + timedelta(days=1)
             
             texto_formatado_html = destacar_termos(html.escape(texto_limpo))
+            texto_url = quote_plus(texto_limpo[:300])
             
             cards_html += f'''
             <div class="card">
@@ -104,7 +132,7 @@ def home():
                     <pre id="texto-{i}">{texto_formatado_html}</pre>
                     <div class="action-buttons">
                         <button class="btn-action" onclick="copiarTexto('{i}')">📋 Copiar Texto</button>
-                        <a class="btn-action btn-calendar" href="https://calendar.google.com/calendar/render?action=TEMPLATE&text={icone_agenda}+{tipo_evento}+-+Proc.+{cnj}&details={texto_limpo[:300]}..." target="_blank">
+                        <a class="btn-action btn-calendar" href="https://calendar.google.com/calendar/render?action=TEMPLATE&text={icone_agenda}+{tipo_evento}+-+Proc.+{cnj}&details={texto_url}..." target="_blank">
                             {icone_agenda} Add à Agenda ({tipo_evento})
                         </a>
                     </div>
@@ -133,17 +161,17 @@ def home():
             }}
             body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg-main); color: var(--text-dark); margin: 0; padding: 12px; }}
             .header {{ background-color: var(--white); padding: 16px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 16px; border: 1px solid var(--border-color); }}
-            .header-top {{ display: flex; justify-content: space-between; align-items: center; }}
+            .header-top {{ display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }}
             .adv-profile {{ font-size: 16px; font-weight: 800; color: var(--blue-primary); }}
             .oab-badge {{ background-color: var(--blue-light); color: var(--blue-secondary); font-size: 12px; padding: 3px 8px; border-radius: 6px; font-weight: 700; margin-left: 6px; }}
             .sub {{ font-size: 11px; color: var(--text-muted); margin-top: 4px; }}
-            .search-box {{ margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color); display: flex; gap: 8px; }}
+            .search-box {{ margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color); display: flex; gap: 8px; flex-wrap: wrap; }}
             input, select {{ padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 13px; }}
-            input[type="text"] {{ width: 100px; }}
+            input[type="text"] {{ width: 100px; flex-grow: 1; }}
             .btn {{ background-color: var(--blue-secondary); color: var(--white); padding: 8px 14px; border: none; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 13px; cursor: pointer; }}
             .card {{ background-color: var(--white); border-radius: 12px; padding: 16px; margin-bottom: 14px; border: 1px solid var(--border-color); border-left: 5px solid var(--blue-secondary); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04); }}
             .empty-card {{ text-align: center; color: var(--text-muted); border-left: 5px solid var(--blue-accent); }}
-            .card-header {{ display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }}
+            .card-header {{ display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }}
             .badge {{ background-color: var(--blue-light); color: var(--blue-secondary); font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 12px; }}
             .cnj {{ font-weight: 700; font-size: 15px; color: var(--blue-primary); }}
             .info-group {{ font-size: 13px; color: var(--text-dark); line-height: 1.5; }}
@@ -152,7 +180,7 @@ def home():
             details {{ margin-top: 12px; background-color: var(--blue-light); border: 1px solid #dbeafe; padding: 10px; border-radius: 8px; }}
             summary {{ font-weight: 600; cursor: pointer; color: var(--blue-secondary); font-size: 13px; }}
             pre {{ font-family: "Courier New", Courier, monospace; font-size: 11px; white-space: pre-wrap; word-wrap: break-word; color: #334155; margin-top: 10px; background-color: var(--white); padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); }}
-            .action-buttons {{ display: flex; gap: 8px; margin-top: 10px; }}
+            .action-buttons {{ display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }}
             .btn-action {{ background-color: var(--white); border: 1px solid var(--blue-secondary); color: var(--blue-secondary); padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; text-decoration: none; }}
             .btn-calendar {{ background-color: var(--blue-light); }}
         </style>
@@ -162,6 +190,8 @@ def home():
                 var text = element.innerText || element.textContent;
                 navigator.clipboard.writeText(text).then(function() {{
                     alert('Teor da intimação copiado!');
+                }}).catch(function(err) {{
+                    alert('Erro ao copiar: ' + err);
                 }});
             }}
         </script>
@@ -171,7 +201,7 @@ def home():
             <div class="header-top">
                 <div>
                     <div class="adv-profile">👨‍⚖️ {nome_advogado} <span class="oab-badge">OAB-{uf} {oab}</span></div>
-                    <div class="sub">Período: {dt_inicio} a {dt_fim}</div>
+                    <div class="sub">Período: {dt_inicio} a {dt_fim} | MOCK - Dados de teste</div>
                 </div>
                 <a href="/?oab={oab}&uf={uf}" class="btn">🔄 Atualizar</a>
             </div>
@@ -182,8 +212,10 @@ def home():
                     <option value="PR" {"selected" if uf == "PR" else ""}>PR</option>
                     <option value="RJ" {"selected" if uf == "RJ" else ""}>RJ</option>
                     <option value="MG" {"selected" if uf == "MG" else ""}>MG</option>
+                    <option value="RS" {"selected" if uf == "RS" else ""}>RS</option>
+                    <option value="SC" {"selected" if uf == "SC" else ""}>SC</option>
                 </select>
-                <button type="submit" class="btn">Buscar OAB</button>
+                <button type="submit" class="btn">Buscar</button>
             </form>
         </div>
         {cards_html}
@@ -192,9 +224,9 @@ def home():
     '''
     return render_template_string(html_template)
 
+def abrir_navegador():
+    webbrowser.open("http://127.0.0.1:5000")
+
 if __name__ == "__main__":
-    # Abre o navegador do celular automaticamente após 1.5 segundo
-    Timer(1.5, lambda: webbrowser.open("http://127.0.0.1:5000")).start()
-    
-    # Inicia o servidor Flask
-    app.run(host="0.0.0.0", port=5000)
+    Timer(1.5, abrir_navegador).start()
+    app.run(host="127.0.0.1", port=5000, debug=False)
