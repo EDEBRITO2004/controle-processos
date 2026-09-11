@@ -101,7 +101,7 @@ SPLASH_TEMPLATE = """<!DOCTYPE html>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body {
-            background: linear-gradient(180deg, #0d47a1 0%, #1976d2 100%);
+            background: linear-gradient(180deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             min-height: 100vh; color: white; text-align: center; padding: 20px;
         }
@@ -115,7 +115,7 @@ SPLASH_TEMPLATE = """<!DOCTYPE html>
         .base { width: 0; height: 0; border-left: 25px solid transparent; border-right: 25px solid transparent; border-bottom: 20px solid #fbc02d; position: absolute; bottom: 0; }
         h1 { font-size: 1.8rem; font-weight: bold; margin-bottom: 6px; }
         .subtitulo { font-size: 1rem; color: #ffcc00; font-style: italic; margin-bottom: 40px; }
-        .btn-acesso { background-color: #ffcc00; color: #0d233a; font-weight: bold; font-size: 1.05rem; padding: 16px 40px; border-radius: 30px; text-decoration: none; box-shadow: 0 4px 10px rgba(0,0,0,0.25); display: inline-block; }
+        .btn-acesso { background-color: #ffcc00; color: #0d233a; font-weight: bold; font-size: 1.05rem; padding: 16px 40px; border-radius: 30px; text-decoration: none; box-shadow: 0 4px 15px rgba(0,0,0,0.4); display: inline-block; }
     </style>
 </head>
 <body>
@@ -134,7 +134,7 @@ SPLASH_TEMPLATE = """<!DOCTYPE html>
 </html>"""
 
 # ------------------------------------------------------------------
-# TEMPLATE DO PAINEL DASHBOARD
+# TEMPLATE DO PAINEL DASHBOARD (DESIGN MODERNO OPACO)
 # ------------------------------------------------------------------
 PAINEL_TEMPLATE = """<!DOCTYPE html>
 <html lang="pt-br">
@@ -144,67 +144,184 @@ PAINEL_TEMPLATE = """<!DOCTYPE html>
     <title>Painel Geral - Controle Jurídico</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        body { background-color: #f4f6f9; color: #333; padding-bottom: 30px; }
-        header { background-color: #0d233a; color: white; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        header h1 { font-size: 1.2rem; font-weight: bold; line-height: 1.2; }
-        nav a { color: #ffcc00; text-decoration: none; font-weight: bold; font-size: 0.9rem; }
+        body { 
+            background: linear-gradient(180deg, #121c24 0%, #1a2a36 100%); 
+            color: #ffffff; 
+            min-height: 100vh;
+            padding-bottom: 30px; 
+        }
+        header { 
+            background: rgba(18, 28, 36, 0.75); 
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            color: white; 
+            padding: 16px 20px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            position: sticky; top: 0; z-index: 100;
+        }
+        header h1 { font-size: 1.2rem; font-weight: 700; line-height: 1.2; }
+        nav a { color: #ffcc00; text-decoration: none; font-weight: 600; font-size: 0.88rem; }
         .container { max-width: 500px; margin: 20px auto; padding: 0 15px; }
-        .stats-grid { display: flex; flex-direction: column; gap: 12px; margin-bottom: 25px; }
-        .stat-card { background: white; padding: 16px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); text-align: center; border-left: 5px solid #1e4570; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .stat-card.prazo { border-left-color: #dc3545; }
-        .stat-card.audiencia { border-left-color: #0d6efd; }
-        .stat-val { font-size: 2rem; font-weight: bold; color: #0d233a; display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
-        .stat-card p { font-size: 0.9rem; color: #666; font-weight: 600; }
-        .modules-title { font-size: 1.1rem; color: #0d233a; margin-bottom: 15px; font-weight: bold; }
-        .modules-grid { display: flex; flex-direction: column; gap: 12px; }
-        .module-btn { background-color: #1e4570; color: white; padding: 16px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 3px 8px rgba(0,0,0,0.1); }
-        .module-btn:hover { background-color: #0d233a; }
+        
+        /* CARDS DE ESTATÍSTICA (ESTILO GLASS OPACO) */
+        .stats-grid { display: flex; flex-direction: column; gap: 14px; margin-bottom: 25px; }
+        .stat-card { 
+            background: rgba(255, 255, 255, 0.08); 
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            padding: 14px 18px; 
+            border-radius: 20px; 
+            display: flex; 
+            align-items: center; 
+            gap: 14px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+        }
+        .avatar {
+            width: 48px; height: 48px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.4rem; flex-shrink: 0;
+        }
+        .stat-info { flex: 1; }
+        .stat-title { font-size: 0.85rem; color: rgba(255,255,255,0.7); font-weight: 500; }
+        .stat-val { font-size: 1.4rem; font-weight: bold; color: #fff; margin-top: 2px; }
+        
+        /* BARRA GAUGE MULTICOLORIDA */
+        .gauge-bar {
+            height: 6px;
+            border-radius: 3px;
+            background: linear-gradient(90deg, #00d2ff 0%, #3a7bd5 50%, #f7106d 100%);
+            margin-top: 8px;
+            width: 100%;
+        }
+
+        .modules-title { font-size: 1.05rem; color: rgba(255,255,255,0.9); margin-bottom: 15px; font-weight: 600; }
+        
+        /* BOTÕES DE MÓDULOS COM AVATAR E GAUGE */
+        .modules-grid { display: flex; flex-direction: column; gap: 14px; }
+        .module-card { 
+            background: rgba(255, 255, 255, 0.07); 
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            padding: 14px; 
+            border-radius: 20px; 
+            text-decoration: none; 
+            color: white;
+            display: flex; 
+            flex-direction: column;
+            gap: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: transform 0.2s, background 0.2s;
+        }
+        .module-card:active { transform: scale(0.98); background: rgba(255, 255, 255, 0.12); }
+        .module-header { display: flex; align-items: center; gap: 14px; }
+        .module-text { flex: 1; }
+        .module-title { font-weight: bold; font-size: 1rem; }
+        .module-subtitle { font-size: 0.8rem; color: rgba(255,255,255,0.6); }
+        .arrow { font-size: 1.1rem; color: rgba(255,255,255,0.5); }
     </style>
 </head>
 <body>
     <header>
         <h1>Painel de Controle<br>Jurídico</h1>
-        <nav><a href="/">← Voltar ao Início</a></nav>
+        <nav><a href="/">← Sair</a></nav>
     </header>
 
     <div class="container">
         <div class="stats-grid">
-            <div class="stat-card prazo">
-                <div class="stat-val">⏳ {{TOTAL_PRAZOS}}</div>
-                <p>Prazos Pendentes</p>
-            </div>
-            <div class="stat-card audiencia">
-                <div class="stat-val">📆 {{TOTAL_AUDIENCIAS}}</div>
-                <p>Audiências</p>
-            </div>
             <div class="stat-card">
-                <div class="stat-val">📂 {{TOTAL_PROCESSOS}}</div>
-                <p>Processos Ativos</p>
+                <div class="avatar">⏳</div>
+                <div class="stat-info">
+                    <div class="stat-title">Prazos Pendentes</div>
+                    <div class="stat-val">{{TOTAL_PRAZOS}}</div>
+                    <div class="gauge-bar" style="background: linear-gradient(90deg, #ff4e50 0%, #f9d423 100%);"></div>
+                </div>
             </div>
+
             <div class="stat-card">
-                <div class="stat-val">👤 {{TOTAL_CLIENTES}}</div>
-                <p>Clientes Cadastrados</p>
+                <div class="avatar">📆</div>
+                <div class="stat-info">
+                    <div class="stat-title">Audiências Agendadas</div>
+                    <div class="stat-val">{{TOTAL_AUDIENCIAS}}</div>
+                    <div class="gauge-bar" style="background: linear-gradient(90deg, #00c6ff 0%, #0072ff 100%);"></div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="avatar">📂</div>
+                <div class="stat-info">
+                    <div class="stat-title">Processos Ativos</div>
+                    <div class="stat-val">{{TOTAL_PROCESSOS}}</div>
+                    <div class="gauge-bar" style="background: linear-gradient(90deg, #11998e 0%, #38ef7d 100%);"></div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="avatar">👤</div>
+                <div class="stat-info">
+                    <div class="stat-title">Clientes Cadastrados</div>
+                    <div class="stat-val">{{TOTAL_CLIENTES}}</div>
+                    <div class="gauge-bar" style="background: linear-gradient(90deg, #8e2de2 0%, #4a00e0 100%);"></div>
+                </div>
             </div>
         </div>
 
         <h2 class="modules-title">Módulos de Gestão</h2>
 
         <div class="modules-grid">
-            <a href="/prazos" class="module-btn">
-                <span>⏳ Gestão de Prazos</span>
-                <span>➔</span>
+            <a href="/prazos" class="module-card">
+                <div class="module-header">
+                    <div class="avatar">⏳</div>
+                    <div class="module-text">
+                        <div class="module-title">Gestão de Prazos</div>
+                        <div class="module-subtitle">Intimações e vencimentos DJEN</div>
+                    </div>
+                    <div class="arrow">➔</div>
+                </div>
+                <div class="gauge-bar" style="background: linear-gradient(90deg, #ff4e50, #f9d423);"></div>
             </a>
-            <a href="/agenda" class="module-btn">
-                <span>📆 Agenda & Audiências</span>
-                <span>➔</span>
+
+            <a href="/agenda" class="module-card">
+                <div class="module-header">
+                    <div class="avatar">📆</div>
+                    <div class="module-text">
+                        <div class="module-title">Agenda & Audiências</div>
+                        <div class="module-subtitle">Compromissos e audiências</div>
+                    </div>
+                    <div class="arrow">➔</div>
+                </div>
+                <div class="gauge-bar" style="background: linear-gradient(90deg, #00c6ff, #0072ff);"></div>
             </a>
-            <a href="/processos" class="module-btn">
-                <span>📂 Gestão de Processos</span>
-                <span>➔</span>
+
+            <a href="/processos" class="module-card">
+                <div class="module-header">
+                    <div class="avatar">📂</div>
+                    <div class="module-text">
+                        <div class="module-title">Gestão de Processos</div>
+                        <div class="module-subtitle">Acompanhamento e acervo</div>
+                    </div>
+                    <div class="arrow">➔</div>
+                </div>
+                <div class="gauge-bar" style="background: linear-gradient(90deg, #11998e, #38ef7d);"></div>
             </a>
-            <a href="/clientes" class="module-btn">
-                <span>👤 Cadastro de Clientes</span>
-                <span>➔</span>
+
+            <a href="/clientes" class="module-card">
+                <div class="module-header">
+                    <div class="avatar">👤</div>
+                    <div class="module-text">
+                        <div class="module-title">Cadastro de Clientes</div>
+                        <div class="module-subtitle">Pessoas físicas e jurídicas</div>
+                    </div>
+                    <div class="arrow">➔</div>
+                </div>
+                <div class="gauge-bar" style="background: linear-gradient(90deg, #8e2de2, #4a00e0);"></div>
             </a>
         </div>
     </div>
@@ -212,7 +329,7 @@ PAINEL_TEMPLATE = """<!DOCTYPE html>
 </html>"""
 
 # ------------------------------------------------------------------
-# TEMPLATE BASE DAS TELAS DE MÓDULOS
+# TEMPLATE BASE DAS TELAS DE MÓDULOS (ESTILO MODERN OPAQUE)
 # ------------------------------------------------------------------
 PAGE_TEMPLATE = """<!DOCTYPE html>
 <html lang="pt-BR">
@@ -221,35 +338,103 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{TITULO_PAGINA}} - Controle Jurídico</title>
     <style>
-        :root {
-            --blue-primary: #0d6efd;
-            --blue-dark: #0a58ca;
-            --red-deadline: #dc3545;
-            --bg-body: #f8f9fa;
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { 
+            background: linear-gradient(180deg, #121c24 0%, #1a2a36 100%); 
+            color: #ffffff; 
+            min-height: 100vh;
+            padding-bottom: 30px; 
         }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background-color: var(--bg-body); margin: 0; padding-bottom: 30px; }
-        header { background-color: var(--blue-dark); color: white; padding: 16px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 1.1rem; }
+        header { 
+            background: rgba(18, 28, 36, 0.8); 
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            color: white; 
+            padding: 16px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            font-weight: bold; 
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            position: sticky; top: 0; z-index: 100;
+        }
         header a { color: #ffcc00; text-decoration: none; font-size: 0.88rem; }
         .container { padding: 12px; max-width: 600px; margin: 0 auto; }
-        .search-form { display: flex; gap: 6px; margin-bottom: 12px; }
-        .search-form input { flex: 1; padding: 10px 12px; border: 1px solid #ced4da; border-radius: 8px; font-size: 0.9rem; outline: none; }
-        .search-form button { padding: 10px 16px; background-color: var(--blue-primary); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        .sub-filter-bar { display: flex; gap: 8px; margin-bottom: 12px; }
-        .btn-sub-filter { flex: 1; padding: 10px 4px; border: 1px solid #ced4da; background-color: #ffffff; color: #495057; border-radius: 6px; font-size: 0.85rem; font-weight: bold; text-decoration: none; text-align: center; display: block; }
-        .btn-sub-filter.active { background-color: var(--blue-primary); color: white; border-color: var(--blue-primary); }
-        .card { background: white; border-radius: 10px; padding: 14px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border-left: 4px solid var(--blue-primary); }
-        .card.card-prazo { border-left-color: var(--red-deadline); }
-        .card h3 { margin: 0 0 6px 0; color: var(--blue-dark); font-size: 1rem; }
-        .card.card-prazo h3 { color: var(--red-deadline); }
-        .card p { margin: 3px 0; color: #495057; font-size: 0.9rem; }
-        .obs-form { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
-        .obs-form textarea { width: 100%; padding: 8px; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.88rem; box-sizing: border-box; resize: vertical; min-height: 60px; font-family: inherit; }
-        .obs-form button { align-self: flex-end; background-color: var(--blue-primary); color: white; border: none; padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: bold; cursor: pointer; }
-        .pub-details summary { color: var(--blue-dark); font-weight: bold; font-size: 0.9rem; cursor: pointer; outline: none; }
-        .pub-content { margin-top: 8px; padding: 10px; background-color: #f8f9fa; border-radius: 6px; font-size: 0.88rem; color: #333; white-space: pre-wrap; }
-        .sub-proc-list { margin: 4px 0 0 0; padding-left: 18px; font-size: 0.85rem; color: #495057; }
-        .info-banner { background: #d1e7dd; color: #0f5132; padding: 12px; border-radius: 8px; margin-bottom: 12px; border: 1px solid #badbcc; font-size: 0.9rem; font-weight: 500; }
-        .erro-banner { background: #f8d7da; color: #842029; padding: 12px; border-radius: 8px; margin-bottom: 12px; border: 1px solid #f5c2c7; font-size: 0.9rem; }
+        
+        .search-form { display: flex; gap: 8px; margin-bottom: 14px; }
+        .search-form input { 
+            flex: 1; padding: 12px 14px; 
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15); 
+            border-radius: 12px; font-size: 0.9rem; color: white; outline: none; 
+        }
+        .search-form input::placeholder { color: rgba(255,255,255,0.4); }
+        .search-form button { 
+            padding: 12px 18px; 
+            background: #0d6efd; color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; 
+        }
+
+        .sub-filter-bar { display: flex; gap: 8px; margin-bottom: 14px; }
+        .btn-sub-filter { 
+            flex: 1; padding: 10px 4px; 
+            background: rgba(255, 255, 255, 0.06); 
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: rgba(255,255,255,0.7); border-radius: 12px; font-size: 0.82rem; font-weight: bold; text-decoration: none; text-align: center; display: block; 
+        }
+        .btn-sub-filter.active { 
+            background: rgba(13, 110, 253, 0.3); 
+            color: #fff; border-color: #0d6efd; 
+        }
+
+        /* CARD NOVO DESIGN COM AVATAR E BARRA DE GAUGE */
+        .card { 
+            background: rgba(255, 255, 255, 0.08); 
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 20px; 
+            padding: 16px; 
+            margin-bottom: 14px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2); 
+        }
+        .card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+        .card-avatar {
+            width: 42px; height: 42px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem; flex-shrink: 0;
+        }
+        .card-title-group { flex: 1; }
+        .card h3 { margin: 0; color: #fff; font-size: 1rem; font-weight: 600; }
+        .card p { margin: 4px 0; color: rgba(255, 255, 255, 0.8); font-size: 0.88rem; }
+        
+        .gauge-bar {
+            height: 4px;
+            border-radius: 2px;
+            background: linear-gradient(90deg, #00c6ff, #0072ff);
+            margin: 10px 0;
+            width: 100%;
+        }
+        .gauge-prazo { background: linear-gradient(90deg, #ff4e50, #f9d423); }
+
+        .obs-form { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+        .obs-form textarea { 
+            width: 100%; padding: 10px; 
+            background: rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.15); 
+            border-radius: 8px; font-size: 0.88rem; color: white; box-sizing: border-box; resize: vertical; min-height: 60px; font-family: inherit; 
+        }
+        .obs-form button { 
+            align-self: flex-end; background-color: #0d6efd; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 0.82rem; font-weight: bold; cursor: pointer; 
+        }
+        
+        .pub-details summary { color: #ffcc00; font-weight: bold; font-size: 0.88rem; cursor: pointer; outline: none; margin-top: 6px; }
+        .pub-content { margin-top: 8px; padding: 12px; background-color: rgba(0, 0, 0, 0.25); border-radius: 8px; font-size: 0.85rem; color: rgba(255,255,255,0.9); white-space: pre-wrap; word-break: break-word; }
+        .sub-proc-list { margin: 6px 0 0 0; padding-left: 18px; font-size: 0.85rem; color: rgba(255,255,255,0.8); }
+        .info-banner { background: rgba(25, 135, 84, 0.25); color: #75b798; padding: 12px; border-radius: 12px; margin-bottom: 12px; border: 1px solid rgba(25, 135, 84, 0.4); font-size: 0.88rem; }
+        .erro-banner { background: rgba(220, 53, 69, 0.25); color: #ea868f; padding: 12px; border-radius: 12px; margin-bottom: 12px; border: 1px solid rgba(220, 53, 69, 0.4); font-size: 0.88rem; }
     </style>
 </head>
 <body>
@@ -306,7 +491,7 @@ async def painel():
                           .replace("{{TOTAL_CLIENTES}}", str(cnt_clientes))
     return HTMLResponse(content=html)
 
-# MÓDULO 1: PRAZOS (Com filtro nativo via Query String)
+# MÓDULO 1: PRAZOS
 @app.get("/prazos", response_class=HTMLResponse)
 async def pagina_prazos(aba: str = "a_vencer", msg: str = None, erro: str = None):
     hoje = date.today()
@@ -377,9 +562,15 @@ async def pagina_prazos(aba: str = "a_vencer", msg: str = None, erro: str = None
         proc_line = f"<p><strong>Processo:</strong> {identificacao_proc}</p>" if identificacao_proc else ""
 
         cards_html += f"""
-        <div class="card card-prazo">
-            <h3>⏳ Data Cumprimento: {data_cumprimento_fmt}</h3>
-            <p><strong>Publicado em:</strong> {data_publicacao_fmt}</p>
+        <div class="card">
+            <div class="card-header">
+                <div class="card-avatar">⏳</div>
+                <div class="card-title-group">
+                    <h3>Data Cumprimento: {data_cumprimento_fmt}</h3>
+                    <p style="font-size: 0.8rem; color: rgba(255,255,255,0.6);">Publicado em: {data_publicacao_fmt}</p>
+                </div>
+            </div>
+            <div class="gauge-bar gauge-prazo"></div>
             {proc_line}
             <p><strong>Cliente:</strong> {cliente}</p>
             <p><strong>Manifestação:</strong> {manifestacao}</p>
@@ -391,16 +582,16 @@ async def pagina_prazos(aba: str = "a_vencer", msg: str = None, erro: str = None
         """
 
     if not cards_html:
-        cards_html = f"<div style='padding:15px; color:#6c757d; background:white; border-radius:8px;'>Nenhum prazo nesta categoria ({aba.replace('_', ' ')}).</div>"
+        cards_html = f"<div style='padding:15px; color:rgba(255,255,255,0.6); background:rgba(255,255,255,0.05); border-radius:12px;'>Nenhum prazo nesta categoria ({aba.replace('_', ' ')}).</div>"
 
     active_v = "active" if aba == "vencidos" else ""
     active_vc = "active" if aba == "vencendo" else ""
     active_av = "active" if aba == "a_vencer" else ""
 
     conteudo = f"""
-    <div style="margin-bottom: 12px;">
+    <div style="margin-bottom: 14px;">
         <form action="/prazos/sincronizar-djen" method="post">
-            <button type="submit" style="width: 100%; padding: 12px; background-color: #198754; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 0.9rem; cursor: pointer;">
+            <button type="submit" style="width: 100%; padding: 14px; background-color: #198754; color: white; border: none; border-radius: 12px; font-weight: bold; font-size: 0.9rem; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
                 🔄 Sincronizar Publicações DJEN (OAB 182981/SP)
             </button>
         </form>
@@ -488,8 +679,14 @@ async def pagina_agenda(msg: str = None):
 
         cards_html += f"""
         <div class="card">
-            <h3>📆 {tipo}</h3>
-            <p><strong>Data:</strong> {data_hora_exibicao}</p>
+            <div class="card-header">
+                <div class="card-avatar">📆</div>
+                <div class="card-title-group">
+                    <h3>{tipo}</h3>
+                    <p style="font-size:0.8rem; color:rgba(255,255,255,0.6);">{data_hora_exibicao}</p>
+                </div>
+            </div>
+            <div class="gauge-bar"></div>
             {proc_line}
             <p><strong>Cliente:</strong> {cliente}</p>
             <p><strong>Descrição:</strong> {desc}</p>
@@ -506,7 +703,7 @@ async def pagina_agenda(msg: str = None):
         """
 
     if not agenda:
-        cards_html = "<p style='padding:15px; background:white; border-radius:8px;'>Nenhum registro pendente na Agenda.</p>"
+        cards_html = "<p style='padding:15px; color:rgba(255,255,255,0.6); background:rgba(255,255,255,0.05); border-radius:12px;'>Nenhum registro pendente na Agenda.</p>"
 
     info_banner = f'<div class="info-banner">{msg}</div>' if msg else ""
     erro_banner = f'<div class="erro-banner">⚠️ Erro no Banco: {erro_db}</div>' if erro_db else ""
@@ -516,7 +713,7 @@ async def pagina_agenda(msg: str = None):
                         .replace("{{CONTEUDO_PAGINA}}", cards_html)
     return HTMLResponse(content=html)
 
-# MÓDULO 3: PROCESSOS (Busca Nativa do Servidor)
+# MÓDULO 3: PROCESSOS
 @app.get("/processos", response_class=HTMLResponse)
 async def pagina_processos(q: str = ""):
     processos = []
@@ -572,7 +769,7 @@ async def pagina_processos(q: str = ""):
         if sistema_link and str(sistema_link).strip():
             url = str(sistema_link).strip()
             if not url.startswith(('http://', 'https://')): url = 'https://' + url
-            btn_link_html = f'''<a href="{url}" target="_blank" style="display:inline-block; margin-top:8px; padding:8px 12px; background-color:#0d6efd; color:white; border-radius:6px; font-size:0.85rem; font-weight:bold; text-decoration:none;">🔗 Acessar {sistema_nome or "Sistema"}</a>'''
+            btn_link_html = f'''<a href="{url}" target="_blank" style="display:inline-block; margin-top:8px; padding:10px 14px; background-color:#0d6efd; color:white; border-radius:10px; font-size:0.85rem; font-weight:bold; text-decoration:none;">🔗 Acessar {sistema_nome or "Sistema"}</a>'''
         else:
             btn_link_html = ''
 
@@ -581,7 +778,13 @@ async def pagina_processos(q: str = ""):
 
         cards_html += f"""
         <div class="card">
-            <h3>📁 {cod_novo}</h3>
+            <div class="card-header">
+                <div class="card-avatar">📂</div>
+                <div class="card-title-group">
+                    <h3>{cod_novo}</h3>
+                </div>
+            </div>
+            <div class="gauge-bar" style="background: linear-gradient(90deg, #11998e, #38ef7d);"></div>
             {proc_num_line}
             <p><strong>Cliente:</strong> {cliente}</p>
             <p><strong>Parte Contrária:</strong> {parte_contraria}</p>
@@ -593,11 +796,11 @@ async def pagina_processos(q: str = ""):
         """
 
     if encontrados == 0:
-        cards_html = "<p style='padding:15px; background:white; border-radius:8px;'>Nenhum processo encontrado.</p>"
+        cards_html = "<p style='padding:15px; color:rgba(255,255,255,0.6); background:rgba(255,255,255,0.05); border-radius:12px;'>Nenhum processo encontrado.</p>"
 
     conteudo = f"""
     <form class="search-form" action="/processos" method="get">
-        <input type="text" name="q" value="{q}" placeholder="🔍 Buscar por código, processo, cliente, vara...">
+        <input type="text" name="q" value="{q}" placeholder="🔍 Buscar por código, processo, cliente...">
         <button type="submit">Buscar</button>
     </form>
     <div>
@@ -612,7 +815,7 @@ async def pagina_processos(q: str = ""):
                         .replace("{{CONTEUDO_PAGINA}}", conteudo)
     return HTMLResponse(content=html)
 
-# MÓDULO 4: CLIENTES (Busca Nativa do Servidor)
+# MÓDULO 4: CLIENTES
 @app.get("/clientes", response_class=HTMLResponse)
 async def pagina_clientes(q: str = ""):
     clientes = []
@@ -672,20 +875,26 @@ async def pagina_clientes(q: str = ""):
                 procs_html += f"<li><strong>{ident}</strong></li>"
             procs_html = f"<ul class='sub-proc-list'>{procs_html}</ul>"
         else:
-            procs_html = "<p style='font-size:0.85rem; color:#6c757d; margin-top:4px;'>Nenhum processo vinculado.</p>"
+            procs_html = "<p style='font-size:0.85rem; color:rgba(255,255,255,0.5); margin-top:4px;'>Nenhum processo vinculado.</p>"
 
         cards_html += f"""
         <div class="card">
             <details class="pub-details">
                 <summary style="cursor:pointer; outline:none;">
-                    <div style="font-size:1.05rem; font-weight:bold; color:var(--blue-dark); margin-bottom:4px;">👤 {nome}</div>
-                    <div style="font-size:0.88rem; color:#495057; font-weight:normal;"><strong>Documento:</strong> {doc}</div>
-                    <div style="font-size:0.88rem; color:#495057; font-weight:normal;"><strong>Telefone:</strong> {tel}</div>
+                    <div class="card-header">
+                        <div class="card-avatar">👤</div>
+                        <div class="card-title-group">
+                            <h3 style="color:#fff;">{nome}</h3>
+                            <p style="font-size:0.82rem; color:rgba(255,255,255,0.6);">Doc: {doc}</p>
+                        </div>
+                    </div>
                 </summary>
-                <div class="pub-content" style="margin-top:10px;">
+                <div class="gauge-bar" style="background: linear-gradient(90deg, #8e2de2, #4a00e0);"></div>
+                <div class="pub-content">
+                    <p><strong>Telefone:</strong> {tel}</p>
                     <p><strong>RG:</strong> {rg}</p>
                     <p><strong>Endereço:</strong> {endereco_completo}</p>
-                    <hr style="border:0; border-top:1px solid #e0e0e0; margin:8px 0;">
+                    <hr style="border:0; border-top:1px solid rgba(255,255,255,0.1); margin:10px 0;">
                     <p><strong>Processos Relacionados:</strong></p>
                     {procs_html}
                 </div>
@@ -694,11 +903,11 @@ async def pagina_clientes(q: str = ""):
         """
 
     if encontrados == 0:
-        cards_html = "<p style='padding:15px; background:white; border-radius:8px;'>Nenhum cliente encontrado.</p>"
+        cards_html = "<p style='padding:15px; color:rgba(255,255,255,0.6); background:rgba(255,255,255,0.05); border-radius:12px;'>Nenhum cliente encontrado.</p>"
 
     conteudo = f"""
     <form class="search-form" action="/clientes" method="get">
-        <input type="text" name="q" value="{q}" placeholder="🔍 Buscar por nome, CPF/CNPJ, cidade...">
+        <input type="text" name="q" value="{q}" placeholder="🔍 Buscar por nome, CPF/CNPJ...">
         <button type="submit">Buscar</button>
     </form>
     <div>
@@ -737,12 +946,10 @@ def sincronizar_djen():
     oab = "182981"
     uf = "SP"
     
-    # Define o intervalo de datas (Data de hoje para a busca)[span_2](start_span)[span_2](end_span)
     hoje = date.today().strftime("%Y-%m-%d")
     data_inicio = hoje
     data_fim = hoje
 
-    # URL ajustada com os parâmetros obrigatórios descobertos no aplicativo móvel do PJe[span_3](start_span)[span_3](end_span)
     url = (
         f"https://comunicaapi.pje.jus.br/api/v1/comunicacao"
         f"?numeroOab={oab}"
@@ -766,7 +973,6 @@ def sincronizar_djen():
     }
     
     try:
-        # Usa curl_cffi simulando Chrome para evitar bloqueio TLS / HTTP 403
         response = requests.get(
             url, 
             headers=headers, 
@@ -792,10 +998,10 @@ def sincronizar_djen():
     conn = get_db_connection()
     try:
         for item in items:
-            num_processo = item.get('numero_processo', '')
-            data_disp = item.get('data_disponibilizacao', '')
-            texto_pub = item.get('texto', '')
-            tipo_comunicacao = item.get('nomeClasse', 'Intimação')
+            num_processo = item.get('numero_processo', '') or item.get('numeroProcesso', '')
+            data_disp = item.get('data_disponibilizacao', '') or item.get('dataDisponibilizacao', '')
+            texto_pub = item.get('texto', '') or item.get('teor', '')
+            tipo_comunicacao = item.get('nomeClasse', '') or item.get('tipoComunicacao', 'Intimação')
 
             if not num_processo or not data_disp:
                 continue
